@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ReactionCam — Connexion</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg: #0a0a0a; --surface: #111; --border: #1e1e1e;
+  --gold: #c9a84c; --gold-dim: #7a6330;
+  --text: #e8e0d0; --muted: #5a5245; --green: #4a7c59; --red: #c0392b;
+}
+html, body { min-height: 100vh; background: var(--bg); color: var(--text); font-family: 'DM Mono', monospace; }
+body::before {
+  content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 0; opacity: 0.4;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.05'/%3E%3C/svg%3E");
+}
+
+.page { min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px 20px; position: relative; z-index: 1; }
+
+header { position: fixed; top: 0; left: 0; right: 0; padding: 24px 40px; display: flex; align-items: center; justify-content: space-between; z-index: 10; }
+.logo { font-family: 'Cormorant Garamond', serif; font-size: 20px; font-weight: 300; letter-spacing: 0.12em; color: var(--gold); text-decoration: none; }
+.logo span { font-style: italic; }
+
+.card { width: 100%; max-width: 420px; background: var(--surface); border: 1px solid var(--border); border-radius: 4px; overflow: hidden; }
+
+.tabs { display: flex; border-bottom: 1px solid var(--border); }
+.tab { flex: 1; padding: 16px; font-family: 'DM Mono', monospace; font-size: 11px; letter-spacing: 0.15em; text-transform: uppercase; background: none; border: none; color: var(--muted); cursor: pointer; transition: color 0.2s, background 0.2s; }
+.tab.active { color: var(--gold); background: #0d0d0d; border-bottom: 1px solid var(--gold); margin-bottom: -1px; }
+
+.form-body { padding: 36px 32px; }
+
+.field { margin-bottom: 20px; }
+.field label { display: block; font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; }
+.field input {
+  width: 100%; background: #0d0d0d; border: 1px solid var(--border); border-radius: 2px;
+  padding: 12px 14px; color: var(--text); font-family: 'DM Mono', monospace; font-size: 13px;
+  outline: none; transition: border-color 0.2s;
+}
+.field input:focus { border-color: var(--gold-dim); }
+
+.btn-submit {
+  width: 100%; padding: 14px; background: var(--gold); color: #0a0a0a;
+  border: none; border-radius: 2px; font-family: 'DM Mono', monospace;
+  font-size: 11px; font-weight: 400; letter-spacing: 0.18em; text-transform: uppercase;
+  cursor: pointer; transition: background 0.2s, transform 0.1s; margin-top: 8px;
+}
+.btn-submit:hover { background: #e0bb60; }
+.btn-submit:active { transform: scale(0.99); }
+.btn-submit:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.error { background: rgba(192,57,43,0.1); border: 1px solid rgba(192,57,43,0.3); border-radius: 2px; padding: 10px 14px; font-size: 12px; color: #e07060; margin-bottom: 16px; display: none; letter-spacing: 0.04em; }
+
+.panel { display: none; }
+.panel.active { display: block; }
+
+.divider { text-align: center; font-size: 11px; color: var(--muted); letter-spacing: 0.08em; margin: 24px 0 0; }
+
+@keyframes fadeUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+.card { animation: fadeUp 0.5s ease both; }
+</style>
+</head>
+<body>
+<header>
+  <a class="logo" href="/">Reaction<span>Cam</span></a>
+</header>
+
+<div class="page">
+  <div class="card">
+    <div class="tabs">
+      <button class="tab active" id="tabLogin">Connexion</button>
+      <button class="tab" id="tabRegister">Créer un compte</button>
+    </div>
+
+    <!-- LOGIN -->
+    <div class="panel active" id="panelLogin">
+      <div class="form-body">
+        <div class="error" id="loginError"></div>
+        <div class="field">
+          <label>Email</label>
+          <input type="email" id="loginEmail" placeholder="toi@exemple.com" autocomplete="email">
+        </div>
+        <div class="field">
+          <label>Mot de passe</label>
+          <input type="password" id="loginPassword" placeholder="••••••••" autocomplete="current-password">
+        </div>
+        <button class="btn-submit" id="btnLogin">Se connecter</button>
+        <p class="divider">Pas encore de compte ? <a href="#" id="goRegister" style="color:var(--gold);text-decoration:none;">Créer un compte</a></p>
+      </div>
+    </div>
+
+    <!-- REGISTER -->
+    <div class="panel" id="panelRegister">
+      <div class="form-body">
+        <div class="error" id="registerError"></div>
+        <div class="field">
+          <label>Ton prénom / pseudo</label>
+          <input type="text" id="registerName" placeholder="Alex" autocomplete="name">
+        </div>
+        <div class="field">
+          <label>Email</label>
+          <input type="email" id="registerEmail" placeholder="toi@exemple.com" autocomplete="email">
+        </div>
+        <div class="field">
+          <label>Mot de passe</label>
+          <input type="password" id="registerPassword" placeholder="6 caractères minimum" autocomplete="new-password">
+        </div>
+        <button class="btn-submit" id="btnRegister">Créer mon compte</button>
+        <p class="divider">Déjà un compte ? <a href="#" id="goLogin" style="color:var(--gold);text-decoration:none;">Se connecter</a></p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// Redirect if already logged in
+fetch('/api/auth/me').then(r => { if (r.ok) location.href = '/dashboard'; });
+
+const tabLogin    = document.getElementById('tabLogin');
+const tabRegister = document.getElementById('tabRegister');
+const panelLogin  = document.getElementById('panelLogin');
+const panelReg    = document.getElementById('panelRegister');
+
+function showLogin()    { tabLogin.classList.add('active');    tabRegister.classList.remove('active'); panelLogin.classList.add('active'); panelReg.classList.remove('active'); }
+function showRegister() { tabRegister.classList.add('active'); tabLogin.classList.remove('active');    panelReg.classList.add('active');   panelLogin.classList.remove('active'); }
+
+tabLogin.addEventListener('click', showLogin);
+tabRegister.addEventListener('click', showRegister);
+document.getElementById('goRegister').addEventListener('click', e => { e.preventDefault(); showRegister(); });
+document.getElementById('goLogin').addEventListener('click', e => { e.preventDefault(); showLogin(); });
+
+if (location.pathname === '/register') showRegister();
+
+async function apiPost(url, body) {
+  const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  return [r.ok, await r.json()];
+}
+
+function setError(id, msg) {
+  const el = document.getElementById(id);
+  el.textContent = msg; el.style.display = msg ? 'block' : 'none';
+}
+
+// LOGIN
+document.getElementById('btnLogin').addEventListener('click', async () => {
+  setError('loginError', '');
+  const btn = document.getElementById('btnLogin');
+  btn.disabled = true; btn.textContent = 'Connexion…';
+  const [ok, data] = await apiPost('/api/auth/login', {
+    email: document.getElementById('loginEmail').value,
+    password: document.getElementById('loginPassword').value
+  });
+  if (ok) { location.href = '/dashboard'; }
+  else { setError('loginError', data.error); btn.disabled = false; btn.textContent = 'Se connecter'; }
+});
+
+// REGISTER
+document.getElementById('btnRegister').addEventListener('click', async () => {
+  setError('registerError', '');
+  const btn = document.getElementById('btnRegister');
+  btn.disabled = true; btn.textContent = 'Création…';
+  const [ok, data] = await apiPost('/api/auth/register', {
+    name: document.getElementById('registerName').value,
+    email: document.getElementById('registerEmail').value,
+    password: document.getElementById('registerPassword').value
+  });
+  if (ok) { location.href = '/dashboard'; }
+  else { setError('registerError', data.error); btn.disabled = false; btn.textContent = 'Créer mon compte'; }
+});
+
+// Enter key
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Enter') return;
+  if (panelLogin.classList.contains('active')) document.getElementById('btnLogin').click();
+  else document.getElementById('btnRegister').click();
+});
+</script>
+</body>
+</html>

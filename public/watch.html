@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ReactionCam</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,600;1,300&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #0a0a0a; --surface: #111; --border: #1e1e1e;
+  --gold: #c9a84c; --gold-dim: #7a6330;
+  --text: #e8e0d0; --muted: #5a5245; --green: #4a7c59; --red: #c0392b;
+}
+
+html, body {
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'DM Mono', monospace;
+  font-size: 14px;
+  overflow: hidden; /* évite le scroll pendant la lecture */
+}
+
+/* ── Écrans ── */
+.screen {
+  display: none;
+  position: fixed; inset: 0;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: var(--bg);
+  overflow-y: auto;
+}
+.screen.active { display: flex; }
+
+/* ── Logo fixe ── */
+.logo {
+  position: fixed; top: 22px; left: 32px; z-index: 100;
+  font-family: 'Cormorant Garamond', serif; font-size: 18px;
+  font-weight: 300; letter-spacing: 0.12em;
+  color: var(--gold); text-decoration: none;
+}
+.logo span { font-style: italic; }
+
+/* ── Card commune ── */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 36px 32px;
+  width: 100%; max-width: 500px;
+  text-align: center;
+}
+.card h2 {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 30px; font-weight: 300;
+  letter-spacing: -0.01em; line-height: 1.2;
+  margin-bottom: 10px;
+}
+.card h2 em { font-style: italic; color: var(--gold); }
+.card p { font-size: 12px; color: var(--muted); line-height: 1.8; margin-bottom: 6px; }
+
+/* ── Boutons ── */
+.btn {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: var(--gold); color: #0a0a0a;
+  border: none; border-radius: 2px;
+  padding: 13px 24px;
+  font-family: 'DM Mono', monospace; font-size: 11px;
+  letter-spacing: 0.14em; text-transform: uppercase;
+  cursor: pointer; transition: background 0.2s;
+  margin-top: 20px; text-decoration: none;
+}
+.btn:hover { background: #dfc060; }
+.btn-ghost {
+  background: transparent; color: var(--muted);
+  border: 1px solid var(--border);
+}
+.btn-ghost:hover { color: var(--text); border-color: var(--muted); background: transparent; }
+.btn-group { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+
+/* ── Spinner ── */
+.spinner {
+  width: 34px; height: 34px;
+  border: 2px solid var(--border); border-top-color: var(--gold);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin: 0 auto 18px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── Consentement ── */
+.name-field { margin: 16px 0 0; text-align: left; }
+.name-field label {
+  display: block; font-size: 10px; letter-spacing: 0.16em;
+  text-transform: uppercase; color: var(--muted); margin-bottom: 7px;
+}
+.name-field input {
+  width: 100%; background: #0c0c0c; border: 1px solid var(--border);
+  border-radius: 2px; padding: 10px 13px;
+  color: var(--text); font-family: 'DM Mono', monospace; font-size: 13px;
+  outline: none; transition: border-color 0.2s;
+}
+.name-field input:focus { border-color: var(--gold-dim); }
+
+.consent-list {
+  text-align: left; background: #0c0c0c;
+  border: 1px solid var(--border); border-radius: 3px;
+  padding: 16px; margin: 14px 0 0;
+}
+.ci {
+  display: flex; gap: 10px; align-items: flex-start;
+  font-size: 11px; color: var(--muted); line-height: 1.6;
+  margin-bottom: 10px;
+}
+.ci:last-child { margin-bottom: 0; }
+.ci-icon { flex-shrink: 0; font-size: 12px; margin-top: 1px; }
+.ci-icon.green { color: var(--green); }
+.ci-icon.gold  { color: var(--gold); }
+
+/* ── Écran caméra ── */
+.cam-wrap {
+  width: 100%; max-width: 300px;
+  aspect-ratio: 16/9;
+  background: #000; border: 1px solid var(--border); border-radius: 3px;
+  overflow: hidden; margin: 18px auto 0; position: relative;
+}
+#camPreview { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
+.cam-label {
+  position: absolute; bottom: 8px; left: 0; right: 0;
+  text-align: center; font-size: 10px; letter-spacing: 0.1em;
+  color: var(--muted); text-transform: uppercase;
+}
+
+/* ── Écran player ── */
+#screenPlayer {
+  padding: 0;
+  background: #000;
+}
+#playerCanvas {
+  /* Le canvas prend toute la place dispo en respectant son ratio interne */
+  display: block;
+  width: 100vw;
+  height: 100vh;
+  object-fit: contain; /* ne fonctionne pas sur canvas, on gère en JS */
+}
+
+/* Badge REC */
+.rec-badge {
+  position: fixed; top: 16px; right: 16px; z-index: 200;
+  display: flex; align-items: center; gap: 6px;
+  background: rgba(0,0,0,0.75); border: 1px solid rgba(192,57,43,0.4);
+  border-radius: 2px; padding: 6px 11px;
+  font-size: 10px; letter-spacing: 0.12em; color: var(--text);
+}
+.rec-dot {
+  width: 6px; height: 6px; background: var(--red); border-radius: 50%;
+  animation: blink 1s ease infinite;
+}
+@keyframes blink { 0%,100% { opacity:1; } 50% { opacity:0.15; } }
+
+/* ── Écran résultat ── */
+.result-preview {
+  width: 100%; max-width: 460px;
+  aspect-ratio: 16/9;
+  background: #000; border: 1px solid var(--border); border-radius: 3px;
+  overflow: hidden; margin: 20px auto 0;
+}
+#resultVideo { width: 100%; height: 100%; }
+
+/* ── Animations ── */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.card { animation: fadeUp 0.4s ease both; }
+</style>
+</head>
+<body>
+
+<a class="logo" href="/">Reaction<span>Cam</span></a>
+
+<!-- ═══ LOADING ═══ -->
+<div class="screen active" id="screenLoading">
+  <div class="spinner"></div>
+  <p style="color:var(--muted);font-size:11px;letter-spacing:0.1em;">Chargement…</p>
+</div>
+
+<!-- ═══ CONSENTEMENT ═══ -->
+<div class="screen" id="screenConsent">
+  <div class="card">
+    <svg style="width:44px;height:44px;margin:0 auto 20px;display:block;opacity:.55" viewBox="0 0 52 52" fill="none" stroke="currentColor" stroke-width="1.2">
+      <circle cx="26" cy="19" r="8"/>
+      <path d="M11 45c0-8.3 6.7-15 15-15s15 6.7 15 15"/>
+      <circle cx="26" cy="26" r="24" stroke-opacity=".15"/>
+    </svg>
+    <h2>Avant de regarder,<br><em>on doit te filmer.</em></h2>
+    <p style="margin-top:6px;">Quelqu'un partage cette vidéo et veut capturer ta réaction en direct.</p>
+
+    <div class="name-field">
+      <label>Ton prénom / pseudo <span style="color:#2e2a25;font-size:9px;">(facultatif)</span></label>
+      <input id="viewerName" type="text" placeholder="Alex…" maxlength="40" autocomplete="off">
+    </div>
+
+    <div class="consent-list">
+      <div class="ci">
+        <span class="ci-icon green">✓</span>
+        <span>Ta <strong>webcam s'active</strong> pour filmer ta réaction pendant la vidéo.</span>
+      </div>
+      <div class="ci">
+        <span class="ci-icon green">✓</span>
+        <span>Une <strong>vidéo composite</strong> est créée : toi en grand, la vidéo en miniature.</span>
+      </div>
+      <div class="ci">
+        <span class="ci-icon gold">★</span>
+        <span><strong>Ta réaction est automatiquement sauvegardée</strong> dans l'espace de la personne qui a partagé ce lien (avec ton prénom si renseigné).</span>
+      </div>
+      <div class="ci">
+        <span class="ci-icon green">✓</span>
+        <span>Tu peux aussi <strong>télécharger ta réaction</strong> à la fin. Conforme RGPD.</span>
+      </div>
+    </div>
+
+    <div class="btn-group">
+      <button class="btn" id="btnConsent">
+        <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.4">
+          <circle cx="6.5" cy="3.5" r="2.5"/>
+          <path d="M1.5 12c0-2.8 2.2-5 5-5s5 2.2 5 5"/>
+        </svg>
+        J'accepte et je continue
+      </button>
+      <a href="/" class="btn btn-ghost" style="margin-top:20px;">Refuser</a>
+    </div>
+    <p style="margin-top:12px;font-size:9px;color:#222;letter-spacing:0.06em;">Tu peux fermer cette page à tout moment.</p>
+  </div>
+</div>
+
+<!-- ═══ CAMÉRA ═══ -->
+<div class="screen" id="screenCam">
+  <div class="card">
+    <svg style="width:44px;height:44px;margin:0 auto 20px;display:block;opacity:.55" viewBox="0 0 52 52" fill="none" stroke="currentColor" stroke-width="1.2">
+      <rect x="4" y="14" width="36" height="26" rx="3"/>
+      <polygon points="40,22 48,17 48,35 40,30"/>
+    </svg>
+    <h2>Active ta<br><em>caméra</em></h2>
+    <p style="margin-top:6px;">Clique sur <strong style="color:var(--text);">Autoriser</strong> dans la popup de ton navigateur.<br>La vidéo démarre automatiquement ensuite.</p>
+
+    <div class="cam-wrap">
+      <video id="camPreview" autoplay muted playsinline></video>
+      <span class="cam-label" id="camStatus">En attente…</span>
+    </div>
+
+    <!-- Ce bouton est rendu visible PUIS cliqué automatiquement.
+         Il doit être dans le DOM et visible pour que play() soit autorisé. -->
+    <button class="btn" id="btnStart" style="display:none;">
+      <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+        <polygon points="2,1 12,6.5 2,12" fill="currentColor"/>
+      </svg>
+      Lancer la vidéo
+    </button>
+
+    <p id="camError" style="display:none;color:var(--red);font-size:11px;margin-top:14px;line-height:1.6;"></p>
+  </div>
+</div>
+
+<!-- ═══ PLAYER ═══ -->
+<div class="screen" id="screenPlayer">
+  <!-- Canvas d'affichage : ce que voit le spectateur -->
+  <canvas id="playerCanvas"></canvas>
+  <!-- Canvas caché : ce qui est enregistré -->
+  <canvas id="recordCanvas" style="display:none;position:absolute;left:-9999px;"></canvas>
+  <div class="rec-badge" id="recBadge" style="display:none;">
+    <div class="rec-dot"></div> REC
+  </div>
+</div>
+
+<!-- ═══ RÉSULTAT ═══ -->
+<div class="screen" id="screenResult">
+  <div class="card" style="max-width:540px;">
+    <svg style="width:44px;height:44px;margin:0 auto 16px;display:block;opacity:.6" viewBox="0 0 52 52" fill="none" stroke="currentColor" stroke-width="1.2">
+      <circle cx="26" cy="26" r="22"/>
+      <path d="M16 27l8 8 12-14"/>
+    </svg>
+    <h2>Merci <em id="thankName"></em> !</h2>
+    <p style="margin-top:6px;">Ta réaction a bien été enregistrée 🎬<br>Tu peux la télécharger ci-dessous.</p>
+
+    <div class="result-preview">
+      <video id="resultVideo" controls playsinline></video>
+    </div>
+
+    <div class="btn-group">
+      <button class="btn" id="btnDownload">
+        <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.4">
+          <path d="M6.5 1v8M4 7l2.5 2.5L9 7"/><path d="M1 11.5h11"/>
+        </svg>
+        Télécharger ma réaction
+      </button>
+      <a href="/" class="btn btn-ghost" style="margin-top:20px;">Accueil</a>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ ERREUR ═══ -->
+<div class="screen" id="screenError">
+  <div class="card">
+    <h2>Vidéo <em>introuvable</em></h2>
+    <p style="margin-top:6px;">Le lien est invalide ou la vidéo a été supprimée.</p>
+    <a href="/" class="btn" style="margin-top:20px;">Accueil</a>
+  </div>
+</div>
+
+<script>
+// ═══ État ═══════════════════════════════════════════════════════════════════
+const videoId = location.pathname.split('/watch/')[1];
+let webcamStream = null;
+let originalVideo = null;
+let recorder      = null;
+let chunks        = [];
+let audioCtx      = null;
+
+// ═══ Utilitaires ════════════════════════════════════════════════════════════
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+// ═══ Boot ════════════════════════════════════════════════════════════════════
+(async function boot() {
+  if (!videoId) return showScreen('screenError');
+  try {
+    const r = await fetch(`/api/video/${videoId}`);
+    if (!r.ok) throw new Error();
+    window._videoUrl = (await r.json()).url;
+    showScreen('screenConsent');
+  } catch { showScreen('screenError'); }
+})();
+
+// ═══ Étape 1 — Consentement ══════════════════════════════════════════════════
+document.getElementById('btnConsent').addEventListener('click', () => {
+  const raw = document.getElementById('viewerName').value.trim();
+  window._viewerName = raw || 'Anonyme';
+  showScreen('screenCam');
+  requestCam();
+});
+
+// ═══ Étape 2 — Webcam ════════════════════════════════════════════════════════
+async function requestCam() {
+  const statusEl = document.getElementById('camStatus');
+  const errorEl  = document.getElementById('camError');
+  const btnStart = document.getElementById('btnStart');
+
+  try {
+    webcamStream = await navigator.mediaDevices.getUserMedia({
+      video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: 'user' },
+      audio: true
+    });
+
+    document.getElementById('camPreview').srcObject = webcamStream;
+    statusEl.textContent = '✓ Caméra active';
+    statusEl.style.color = 'var(--green)';
+
+    // Rendre le bouton visible (requis pour que .click() soit autorisé)
+    btnStart.style.display = 'inline-flex';
+
+    // Auto-clic après un court délai (laisse le navigateur "voir" le bouton)
+    setTimeout(() => btnStart.click(), 300);
+
+  } catch (e) {
+    errorEl.textContent = e.name === 'NotAllowedError'
+      ? 'Accès refusé. Autorise la caméra dans les paramètres de ton navigateur.'
+      : 'Impossible d\'accéder à la caméra : ' + e.message;
+    errorEl.style.display = 'block';
+    statusEl.textContent  = '✗ Échec';
+    statusEl.style.color  = 'var(--red)';
+  }
+}
+
+// ═══ Étape 3 — Lecture + enregistrement ═════════════════════════════════════
+document.getElementById('btnStart').addEventListener('click', startExperience);
+
+async function startExperience() {
+  showScreen('screenPlayer');
+
+  const canvas    = document.getElementById('playerCanvas');
+  const ctx       = canvas.getContext('2d');
+  const recCanvas = document.getElementById('recordCanvas');
+  const rctx      = recCanvas.getContext('2d');
+
+  // Résolution interne fixe
+  const W = 1280, H = 720;
+  canvas.width    = W; canvas.height    = H;
+  recCanvas.width = W; recCanvas.height = H;
+
+  // Taille d'affichage : remplit l'écran en préservant le ratio 16:9
+  function resizeCanvas() {
+    const scaleW = window.innerWidth  / W;
+    const scaleH = window.innerHeight / H;
+    const scale  = Math.min(scaleW, scaleH);
+    canvas.style.width  = Math.round(W * scale) + 'px';
+    canvas.style.height = Math.round(H * scale) + 'px';
+    canvas.style.display = 'block';
+    canvas.style.margin  = 'auto';
+  }
+  resizeCanvas();
+  window.addEventListener('resize', resizeCanvas);
+
+  // Vidéo originale — muted pour que play() marche sans geste direct
+  originalVideo             = document.createElement('video');
+  originalVideo.src         = window._videoUrl;
+  originalVideo.crossOrigin = 'anonymous';
+  originalVideo.playsInline = true;
+  originalVideo.preload     = 'auto';
+  originalVideo.muted       = true; // l'audio passe par AudioContext ci-dessous
+
+  await new Promise((res, rej) => {
+    originalVideo.addEventListener('canplay', res, { once: true });
+    originalVideo.addEventListener('error',   rej, { once: true });
+  });
+
+  // Webcam
+  const webcamEl       = document.createElement('video');
+  webcamEl.srcObject   = webcamStream;
+  webcamEl.playsInline = true;
+  webcamEl.muted       = true;
+  await webcamEl.play();
+
+  // Audio : mic + son vidéo → haut-parleurs + enregistrement
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  const dest = audioCtx.createMediaStreamDestination();
+
+  audioCtx.createMediaStreamSource(webcamStream).connect(dest); // micro
+
+  const vidSrc = audioCtx.createMediaElementSource(originalVideo);
+  vidSrc.connect(audioCtx.destination); // son vidéo → enceintes
+  vidSrc.connect(dest);                 // son vidéo → enregistrement
+
+  // Recorder sur le canvas caché
+  const mimeType = ['video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm']
+    .find(m => MediaRecorder.isTypeSupported(m));
+
+  recorder = new MediaRecorder(
+    new MediaStream([...recCanvas.captureStream(30).getVideoTracks(), ...dest.stream.getAudioTracks()]),
+    { mimeType, videoBitsPerSecond: 3_500_000 }
+  );
+  chunks = [];
+  recorder.addEventListener('dataavailable', e => { if (e.data.size > 0) chunks.push(e.data); });
+  recorder.addEventListener('stop', handleRecordingDone);
+
+  // ── Helpers dessin ──────────────────────────────────────────────────────────
+  function pip(c, src, x, y, w, h, mirror) {
+    // Ombre + fond
+    c.save();
+    c.shadowColor = 'rgba(0,0,0,0.9)'; c.shadowBlur = 20;
+    c.fillStyle = '#000';
+    c.fillRect(x - 2, y - 2, w + 4, h + 4);
+    c.restore();
+    // Image (miroir optionnel)
+    if (mirror) {
+      c.save(); c.translate(x + w, y); c.scale(-1, 1);
+      c.drawImage(src, 0, 0, w, h);
+      c.restore();
+    } else {
+      c.drawImage(src, x, y, w, h);
+    }
+    // Bordure or
+    c.strokeStyle = 'rgba(201,168,76,0.65)';
+    c.lineWidth   = 1.5;
+    c.strokeRect(x, y, w, h);
+  }
+
+  function vignette(c) {
+    const g = c.createRadialGradient(W/2, H/2, H*0.2, W/2, H/2, H*0.85);
+    g.addColorStop(0, 'rgba(0,0,0,0)');
+    g.addColorStop(1, 'rgba(0,0,0,0.55)');
+    c.fillStyle = g; c.fillRect(0, 0, W, H);
+  }
+
+  // ── Boucle RAF ──────────────────────────────────────────────────────────────
+  let running = true;
+
+  function draw() {
+    if (!running) return;
+
+    const vidAR = (originalVideo.videoWidth / originalVideo.videoHeight) || (16/9);
+    const PAD   = 22;
+
+    // CANVAS VISIBLE — vidéo en grand, webcam en bas à droite
+    ctx.clearRect(0, 0, W, H);
+    ctx.drawImage(originalVideo, 0, 0, W, H);
+    vignette(ctx);
+
+    const cW = Math.round(W * 0.23);
+    const cH = Math.round(cW * (9/16));
+    pip(ctx, webcamEl, W - cW - PAD, H - cH - PAD, cW, cH, true /* miroir */);
+
+    // CANVAS CACHÉ (enregistrement) — webcam en grand, vidéo en haut à gauche
+    rctx.clearRect(0, 0, W, H);
+    rctx.save(); rctx.translate(W, 0); rctx.scale(-1, 1);
+    rctx.drawImage(webcamEl, 0, 0, W, H);
+    rctx.restore();
+    vignette(rctx);
+
+    const pW = Math.round(W * 0.27);
+    const pH = Math.round(pW / vidAR);
+    pip(rctx, originalVideo, PAD, PAD, pW, pH, false);
+
+    rctx.fillStyle = 'rgba(255,255,255,0.07)';
+    rctx.font = '10px monospace';
+    rctx.fillText('reactioncam', W - 115, H - 14);
+
+    requestAnimationFrame(draw);
+  }
+
+  // ── Démarrage ───────────────────────────────────────────────────────────────
+  document.getElementById('recBadge').style.display = 'flex';
+  recorder.start(500);
+  await originalVideo.play();
+  draw();
+
+  originalVideo.addEventListener('ended', () => {
+    running = false;
+    stopRecording();
+  }, { once: true });
+}
+
+// ═══ Arrêt ═══════════════════════════════════════════════════════════════════
+function stopRecording() {
+  if (recorder?.state !== 'inactive') recorder.stop();
+  if (webcamStream) webcamStream.getTracks().forEach(t => t.stop());
+  if (audioCtx)     audioCtx.close();
+  document.getElementById('recBadge').style.display = 'none';
+}
+
+// ═══ Résultat ════════════════════════════════════════════════════════════════
+async function handleRecordingDone() {
+  const blob = new Blob(chunks, { type: 'video/webm' });
+
+  // Upload silencieux en arrière-plan → dashboard de l'uploader
+  const fd = new FormData();
+  fd.append('reaction', blob, 'reaction.webm');
+  fd.append('viewerName', window._viewerName || 'Anonyme');
+  fetch(`/reaction/${videoId}`, { method: 'POST', body: fd }).catch(() => {});
+
+  // Affichage immédiat
+  const url = URL.createObjectURL(blob);
+  document.getElementById('resultVideo').src = url;
+
+  // Message de remerciement personnalisé
+  const name = window._viewerName === 'Anonyme' ? '' : window._viewerName;
+  document.getElementById('thankName').textContent = name;
+
+  document.getElementById('btnDownload').addEventListener('click', () => {
+    const a = document.createElement('a');
+    a.href = url; a.download = `reaction_${videoId}.webm`; a.click();
+  });
+
+  showScreen('screenResult');
+}
+</script>
+</body>
+</html>

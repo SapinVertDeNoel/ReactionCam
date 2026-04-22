@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ReactionCam — Mon espace</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg: #0a0a0a; --surface: #111; --surface2: #141414; --border: #1e1e1e;
+  --gold: #c9a84c; --gold-dim: #7a6330;
+  --text: #e8e0d0; --muted: #5a5245; --green: #4a7c59; --red: #c0392b;
+}
+html, body { min-height: 100vh; background: var(--bg); color: var(--text); font-family: 'DM Mono', monospace; font-size: 14px; }
+body::before {
+  content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 0; opacity: 0.35;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.05'/%3E%3C/svg%3E");
+}
+
+/* ── Layout ── */
+.app { position: relative; z-index: 1; min-height: 100vh; display: flex; flex-direction: column; }
+
+nav {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 20px 48px; border-bottom: 1px solid var(--border);
+  position: sticky; top: 0; background: rgba(10,10,10,0.95);
+  backdrop-filter: blur(8px); z-index: 100;
+}
+.logo { font-family: 'Cormorant Garamond', serif; font-size: 20px; font-weight: 300; letter-spacing: 0.12em; color: var(--gold); text-decoration: none; }
+.logo span { font-style: italic; }
+.nav-right { display: flex; align-items: center; gap: 20px; }
+.user-name { font-size: 12px; color: var(--muted); letter-spacing: 0.06em; }
+.btn-logout { background: none; border: 1px solid var(--border); border-radius: 2px; padding: 8px 16px; color: var(--muted); font-family: 'DM Mono', monospace; font-size: 11px; letter-spacing: 0.1em; cursor: pointer; transition: color 0.2s, border-color 0.2s; }
+.btn-logout:hover { color: var(--text); border-color: var(--muted); }
+
+main { flex: 1; padding: 48px; max-width: 1200px; width: 100%; margin: 0 auto; }
+
+/* ── Top bar ── */
+.topbar { display: flex; align-items: flex-end; justify-content: space-between; margin-bottom: 40px; flex-wrap: wrap; gap: 16px; }
+.page-title { font-family: 'Cormorant Garamond', serif; font-size: 42px; font-weight: 300; line-height: 1; }
+.page-title em { font-style: italic; color: var(--gold); }
+.btn-upload { display: inline-flex; align-items: center; gap: 8px; background: var(--gold); color: #0a0a0a; border: none; border-radius: 2px; padding: 12px 22px; font-family: 'DM Mono', monospace; font-size: 11px; letter-spacing: 0.15em; text-transform: uppercase; cursor: pointer; transition: background 0.2s; text-decoration: none; }
+.btn-upload:hover { background: #e0bb60; }
+
+/* ── Empty state ── */
+.empty { text-align: center; padding: 80px 40px; border: 1px dashed var(--border); border-radius: 4px; }
+.empty-icon { width: 48px; height: 48px; margin: 0 auto 20px; opacity: 0.2; }
+.empty h3 { font-family: 'Cormorant Garamond', serif; font-size: 26px; font-weight: 300; margin-bottom: 8px; }
+.empty p { font-size: 12px; color: var(--muted); }
+
+/* ── Video cards ── */
+.videos-grid { display: flex; flex-direction: column; gap: 24px; }
+
+.video-card { background: var(--surface); border: 1px solid var(--border); border-radius: 4px; overflow: hidden; }
+.video-header { display: flex; align-items: center; gap: 20px; padding: 20px 24px; cursor: pointer; transition: background 0.2s; }
+.video-header:hover { background: var(--surface2); }
+.video-thumb { width: 120px; height: 68px; background: #000; border-radius: 2px; overflow: hidden; flex-shrink: 0; position: relative; border: 1px solid var(--border); }
+.video-thumb video { width: 100%; height: 100%; object-fit: cover; }
+.video-thumb-placeholder { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; opacity: 0.2; }
+.video-meta { flex: 1; min-width: 0; }
+.video-name { font-size: 13px; color: var(--text); margin-bottom: 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.video-date { font-size: 11px; color: var(--muted); letter-spacing: 0.06em; margin-bottom: 10px; }
+.video-stats { display: flex; gap: 16px; }
+.stat { font-size: 11px; letter-spacing: 0.08em; }
+.stat-val { color: var(--gold); }
+.stat-lbl { color: var(--muted); margin-left: 4px; }
+.video-actions { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+.btn-copy { background: none; border: 1px solid var(--border); border-radius: 2px; padding: 8px 14px; color: var(--muted); font-family: 'DM Mono', monospace; font-size: 10px; letter-spacing: 0.1em; cursor: pointer; transition: all 0.2s; white-space: nowrap; }
+.btn-copy:hover { color: var(--gold); border-color: var(--gold-dim); }
+.btn-copy.copied { color: var(--green); border-color: var(--green); }
+.chevron { transition: transform 0.3s; opacity: 0.4; flex-shrink: 0; }
+.video-card.open .chevron { transform: rotate(180deg); }
+
+/* ── Reactions list ── */
+.reactions-section { border-top: 1px solid var(--border); }
+.reactions-header { padding: 14px 24px; font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--muted); background: #0d0d0d; }
+.reactions-list { padding: 0; }
+.reaction-row { display: flex; align-items: center; gap: 16px; padding: 14px 24px; border-bottom: 1px solid var(--border); transition: background 0.15s; }
+.reaction-row:last-child { border-bottom: none; }
+.reaction-row:hover { background: var(--surface2); }
+.reaction-thumb { width: 90px; height: 52px; background: #000; border-radius: 2px; overflow: hidden; flex-shrink: 0; border: 1px solid var(--border); cursor: pointer; position: relative; }
+.reaction-thumb video { width: 100%; height: 100%; object-fit: cover; }
+.play-overlay { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.3); transition: background 0.2s; }
+.reaction-thumb:hover .play-overlay { background: rgba(0,0,0,0.1); }
+.reaction-meta { flex: 1; }
+.reaction-date { font-size: 11px; color: var(--muted); letter-spacing: 0.06em; }
+.reaction-status { font-size: 10px; margin-top: 3px; letter-spacing: 0.08em; }
+.status-ready { color: var(--green); }
+.status-processing { color: var(--gold); }
+.reaction-dl { display: flex; align-items: center; gap: 6px; background: none; border: 1px solid var(--border); border-radius: 2px; padding: 7px 12px; color: var(--muted); font-family: 'DM Mono', monospace; font-size: 10px; letter-spacing: 0.1em; cursor: pointer; transition: all 0.2s; text-decoration: none; }
+.reaction-dl:hover { color: var(--text); border-color: var(--muted); }
+
+/* ── Spinner ── */
+.spinner { width: 32px; height: 32px; border: 2px solid var(--border); border-top-color: var(--gold); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 80px auto; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── Modal vidéo ── */
+.modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.92); z-index: 200; align-items: center; justify-content: center; padding: 20px; }
+.modal-overlay.open { display: flex; }
+.modal-content { max-width: 800px; width: 100%; position: relative; }
+.modal-video { width: 100%; border-radius: 3px; background: #000; }
+.modal-close { position: absolute; top: -40px; right: 0; background: none; border: none; color: var(--muted); font-size: 20px; cursor: pointer; font-family: 'DM Mono', monospace; letter-spacing: 0.1em; }
+.modal-close:hover { color: var(--text); }
+
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+.app { animation: fadeIn 0.4s ease; }
+
+@media (max-width: 640px) {
+  nav { padding: 16px 20px; }
+  main { padding: 24px 20px; }
+  .video-thumb { width: 80px; height: 46px; }
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <nav>
+    <a class="logo" href="/">Reaction<span>Cam</span></a>
+    <div class="nav-right">
+      <span class="user-name" id="userName">…</span>
+      <button class="btn-logout" id="btnLogout">Déconnexion</button>
+    </div>
+  </nav>
+
+  <main>
+    <div class="topbar">
+      <div>
+        <div class="page-title">Mes <em>vidéos</em></div>
+      </div>
+      <a href="/" class="btn-upload">
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path d="M6 1v7M2 5l4-4 4 4"/><path d="M1 10h10"/>
+        </svg>
+        Uploader une vidéo
+      </a>
+    </div>
+
+    <div id="content"><div class="spinner"></div></div>
+  </main>
+</div>
+
+<!-- Modal -->
+<div class="modal-overlay" id="modal">
+  <div class="modal-content">
+    <button class="modal-close" id="modalClose">✕ fermer</button>
+    <video class="modal-video" id="modalVideo" controls playsinline></video>
+  </div>
+</div>
+
+<script>
+// ── Auth check ────────────────────────────────────────────────────────────────
+let me = null;
+async function init() {
+  const r = await fetch('/api/auth/me');
+  if (!r.ok) { location.href = '/login'; return; }
+  me = await r.json();
+  document.getElementById('userName').textContent = me.name;
+  loadDashboard();
+}
+
+document.getElementById('btnLogout').addEventListener('click', async () => {
+  await fetch('/api/auth/logout', { method: 'POST' });
+  location.href = '/login';
+});
+
+// ── Dashboard data ─────────────────────────────────────────────────────────────
+async function loadDashboard() {
+  const r = await fetch('/api/dashboard');
+  const { videos } = await r.json();
+  renderDashboard(videos);
+}
+
+function formatDate(ts) {
+  return new Date(ts).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+}
+
+function renderDashboard(videos) {
+  const el = document.getElementById('content');
+  if (!videos.length) {
+    el.innerHTML = `
+      <div class="empty">
+        <svg class="empty-icon" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.2">
+          <rect x="4" y="8" width="40" height="32" rx="3"/>
+          <polygon points="18,16 34,24 18,32"/>
+        </svg>
+        <h3>Aucune vidéo pour l'instant</h3>
+        <p style="margin-top:8px;">Upload ta première vidéo pour générer un lien de réaction.</p>
+      </div>`;
+    return;
+  }
+
+  el.innerHTML = `<div class="videos-grid">${videos.map(renderVideoCard).join('')}</div>`;
+
+  // Events
+  videos.forEach(v => {
+    // Toggle réactions
+    document.getElementById(`header-${v.id}`).addEventListener('click', () => {
+      document.getElementById(`card-${v.id}`).classList.toggle('open');
+    });
+    // Copier lien
+    document.getElementById(`copy-${v.id}`).addEventListener('click', e => {
+      e.stopPropagation();
+      const link = `${location.origin}/watch/${v.id}`;
+      navigator.clipboard.writeText(link).then(() => {
+        const btn = document.getElementById(`copy-${v.id}`);
+        btn.textContent = '✓ Copié'; btn.classList.add('copied');
+        setTimeout(() => { btn.textContent = 'Copier le lien'; btn.classList.remove('copied'); }, 2000);
+      });
+    });
+    // Réactions : play + download
+    v.reactions.forEach(rx => {
+      const thumb = document.getElementById(`rxthumb-${rx.id}`);
+      if (thumb) thumb.addEventListener('click', () => openModal(rx.url));
+      const dl = document.getElementById(`rxdl-${rx.id}`);
+      if (dl) dl.addEventListener('click', () => {
+        const a = document.createElement('a');
+        a.href = rx.url;
+        a.download = `reaction_${rx.id}.mp4`;
+        a.click();
+      });
+    });
+  });
+}
+
+function renderVideoCard(v) {
+  const shareLink = `${location.origin}/watch/${v.id}`;
+  return `
+  <div class="video-card" id="card-${v.id}">
+    <div class="video-header" id="header-${v.id}">
+      <div class="video-thumb">
+        <video src="/uploads/${v.filename}" muted preload="metadata"></video>
+      </div>
+      <div class="video-meta">
+        <div class="video-name">${v.originalName || v.filename}</div>
+        <div class="video-date">${formatDate(v.createdAt)}</div>
+        <div class="video-stats">
+          <span class="stat"><span class="stat-val">${v.reactions.length}</span><span class="stat-lbl">réaction${v.reactions.length !== 1 ? 's' : ''}</span></span>
+        </div>
+      </div>
+      <div class="video-actions">
+        <button class="btn-copy" id="copy-${v.id}">Copier le lien</button>
+        <svg class="chevron" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path d="M4 6l4 4 4-4"/>
+        </svg>
+      </div>
+    </div>
+
+    <div class="reactions-section">
+      <div class="reactions-header">
+        ${v.reactions.length === 0 ? 'Aucune réaction reçue' : `${v.reactions.length} réaction${v.reactions.length > 1 ? 's' : ''} reçue${v.reactions.length > 1 ? 's' : ''}`}
+      </div>
+      ${v.reactions.length === 0 ? `
+        <div style="padding:20px 24px;font-size:12px;color:var(--muted);">
+          Partage ce lien pour recevoir des réactions : 
+          <span style="color:var(--gold);font-size:11px;">${shareLink}</span>
+        </div>
+      ` : `
+        <div class="reactions-list">
+          ${v.reactions.map(rx => renderReactionRow(rx)).join('')}
+        </div>
+      `}
+    </div>
+  </div>`;
+}
+
+function renderReactionRow(rx) {
+  const url = rx.url;
+  return `
+  <div class="reaction-row">
+    <div class="reaction-thumb" id="rxthumb-${rx.id}">
+      ${url ? `
+        <video src="${url}" muted preload="metadata"></video>
+        <div class="play-overlay">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+            <polygon points="7,4 17,10 7,16" fill="rgba(255,255,255,0.8)"/>
+          </svg>
+        </div>
+      ` : `
+        <div class="play-overlay" style="background:rgba(0,0,0,0.5);">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2" opacity="0.4">
+            <circle cx="8" cy="8" r="6"/><path d="M5 8h6M8 5v6"/>
+          </svg>
+        </div>
+      `}
+    </div>
+    <div class="reaction-meta">
+      <div class="reaction-date">${formatDate(rx.createdAt)}</div>
+      <div class="reaction-status ${rx.ready ? 'status-ready' : 'status-processing'}">
+        ${rx.ready ? (rx.mp4Url ? '● MP4 prêt' : '● Vidéo prête') : '◌ Conversion en cours…'}
+      </div>
+    </div>
+    ${url ? `<button class="reaction-dl" id="rxdl-${rx.id}">
+      <svg width="11" height="11" viewBox="0 0 11 11" fill="none" stroke="currentColor" stroke-width="1.4">
+        <path d="M5.5 1v6M3 5l2.5 2.5L8 5"/><path d="M1 9.5h9"/>
+      </svg>
+      Télécharger
+    </button>` : ''}
+  </div>`;
+}
+
+// ── Modal ─────────────────────────────────────────────────────────────────────
+function openModal(url) {
+  const modal = document.getElementById('modal');
+  const video = document.getElementById('modalVideo');
+  video.src = url; video.play();
+  modal.classList.add('open');
+}
+
+document.getElementById('modalClose').addEventListener('click', () => {
+  document.getElementById('modal').classList.remove('open');
+  document.getElementById('modalVideo').pause();
+  document.getElementById('modalVideo').src = '';
+});
+
+document.getElementById('modal').addEventListener('click', e => {
+  if (e.target === document.getElementById('modal')) {
+    document.getElementById('modal').classList.remove('open');
+    document.getElementById('modalVideo').pause();
+    document.getElementById('modalVideo').src = '';
+  }
+});
+
+init();
+</script>
+</body>
+</html>

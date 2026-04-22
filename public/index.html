@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ReactionCam — Capture les vraies réactions</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,600;1,300&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0a0a0a;
+    --surface: #111111;
+    --border: #222222;
+    --gold: #c9a84c;
+    --gold-dim: #7a6330;
+    --text: #e8e0d0;
+    --muted: #5a5245;
+    --danger: #c0392b;
+  }
+
+  html, body {
+    height: 100%;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 14px;
+    line-height: 1.6;
+  }
+
+  body {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ── Grain overlay ── */
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 999;
+    opacity: 0.5;
+  }
+
+  /* ── Header ── */
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px 48px;
+    border-bottom: 1px solid var(--border);
+    gap: 16px;
+  }
+  header .tagline { flex: 1; text-align: center; }
+
+  .logo {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 22px;
+    font-weight: 300;
+    letter-spacing: 0.12em;
+    color: var(--gold);
+    text-decoration: none;
+  }
+
+  .logo span { font-style: italic; }
+
+  .tagline {
+    color: var(--muted);
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+  }
+
+  /* ── Hero ── */
+  .hero {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 80px 48px;
+    position: relative;
+  }
+
+  .hero::after {
+    content: '';
+    position: absolute;
+    width: 600px; height: 600px;
+    background: radial-gradient(circle, rgba(201,168,76,0.05) 0%, transparent 70%);
+    border-radius: 50%;
+    pointer-events: none;
+  }
+
+  h1 {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: clamp(48px, 6vw, 88px);
+    font-weight: 300;
+    line-height: 1.05;
+    text-align: center;
+    letter-spacing: -0.01em;
+    margin-bottom: 20px;
+    position: relative; z-index: 1;
+  }
+
+  h1 em {
+    font-style: italic;
+    color: var(--gold);
+  }
+
+  .subtitle {
+    color: var(--muted);
+    font-size: 13px;
+    letter-spacing: 0.1em;
+    text-align: center;
+    margin-bottom: 64px;
+    position: relative; z-index: 1;
+  }
+
+  /* ── Drop zone ── */
+  .drop-zone {
+    position: relative; z-index: 1;
+    width: 100%;
+    max-width: 560px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 64px 40px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.3s, background 0.3s;
+    background: var(--surface);
+  }
+
+  .drop-zone:hover, .drop-zone.drag-over {
+    border-color: var(--gold-dim);
+    background: #161410;
+  }
+
+  .drop-zone.drag-over { border-color: var(--gold); }
+
+  .drop-icon {
+    width: 48px; height: 48px;
+    margin: 0 auto 20px;
+    opacity: 0.4;
+  }
+
+  .drop-label {
+    font-size: 13px;
+    color: var(--muted);
+    letter-spacing: 0.08em;
+    margin-bottom: 8px;
+  }
+
+  .drop-label strong {
+    color: var(--gold);
+    font-weight: 400;
+  }
+
+  .drop-limit {
+    font-size: 11px;
+    color: #3a3530;
+    letter-spacing: 0.1em;
+  }
+
+  #fileInput { display: none; }
+
+  /* ── Progress / Result ── */
+  .upload-progress {
+    display: none;
+    width: 100%;
+    max-width: 560px;
+    position: relative; z-index: 1;
+    margin-top: 16px;
+  }
+
+  .progress-bar-wrap {
+    height: 2px;
+    background: var(--border);
+    border-radius: 2px;
+    overflow: hidden;
+    margin-bottom: 10px;
+  }
+
+  .progress-bar {
+    height: 100%;
+    background: var(--gold);
+    width: 0%;
+    transition: width 0.3s ease;
+  }
+
+  .progress-label {
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 0.1em;
+  }
+
+  .result-box {
+    display: none;
+    width: 100%;
+    max-width: 560px;
+    background: #0f0f0a;
+    border: 1px solid var(--gold-dim);
+    border-radius: 4px;
+    padding: 28px 32px;
+    position: relative; z-index: 1;
+    margin-top: 16px;
+  }
+
+  .result-title {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 13px;
+    color: var(--gold);
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    margin-bottom: 16px;
+  }
+
+  .link-row {
+    display: flex;
+    gap: 8px;
+    align-items: stretch;
+  }
+
+  .link-input {
+    flex: 1;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    padding: 10px 14px;
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.04em;
+    outline: none;
+  }
+
+  .copy-btn {
+    background: var(--gold);
+    color: var(--bg);
+    border: none;
+    border-radius: 2px;
+    padding: 10px 18px;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: background 0.2s, opacity 0.2s;
+    white-space: nowrap;
+  }
+
+  .copy-btn:hover { background: #e0bb60; }
+  .copy-btn.copied { background: #4a7c59; color: #fff; }
+
+  .upload-another {
+    margin-top: 14px;
+    display: inline-block;
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 0.1em;
+    text-decoration: none;
+    cursor: pointer;
+    border: none;
+    background: none;
+    padding: 0;
+    transition: color 0.2s;
+  }
+
+  .upload-another:hover { color: var(--text); }
+
+  /* ── How it works ── */
+  .steps {
+    padding: 80px 48px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    justify-content: center;
+    gap: 64px;
+    flex-wrap: wrap;
+  }
+
+  .step {
+    max-width: 200px;
+    text-align: center;
+  }
+
+  .step-num {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 48px;
+    font-weight: 300;
+    color: var(--border);
+    line-height: 1;
+    margin-bottom: 12px;
+  }
+
+  .step-title {
+    font-size: 11px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin-bottom: 8px;
+  }
+
+  .step-desc {
+    font-size: 12px;
+    color: var(--muted);
+    line-height: 1.7;
+  }
+
+  /* ── Footer ── */
+  footer {
+    padding: 24px 48px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 11px;
+    color: #2a2520;
+    letter-spacing: 0.08em;
+  }
+
+  /* ── Error ── */
+  .error-msg {
+    display: none;
+    position: relative; z-index: 1;
+    margin-top: 12px;
+    font-size: 12px;
+    color: var(--danger);
+    letter-spacing: 0.06em;
+  }
+
+  /* ── Anim ── */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .hero > * {
+    animation: fadeUp 0.7s ease both;
+  }
+  .hero > *:nth-child(1) { animation-delay: 0.1s; }
+  .hero > *:nth-child(2) { animation-delay: 0.2s; }
+  .hero > *:nth-child(3) { animation-delay: 0.3s; }
+  .hero > *:nth-child(4) { animation-delay: 0.35s; }
+</style>
+</head>
+<body>
+
+<header>
+  <a class="logo" href="/">Reaction<span>Cam</span></a>
+  <span class="tagline">Capture les vraies réactions</span>
+  <div id="authNav" style="display:flex;gap:12px;align-items:center;">
+    <a href="/login" style="font-size:11px;letter-spacing:0.12em;color:var(--muted);text-decoration:none;text-transform:uppercase;">Connexion</a>
+    <a href="/register" style="font-size:11px;letter-spacing:0.12em;color:var(--gold);text-decoration:none;text-transform:uppercase;">Créer un compte</a>
+  </div>
+  <div id="userNav" style="display:none;gap:12px;align-items:center;">
+    <a href="/dashboard" style="font-size:11px;letter-spacing:0.12em;color:var(--muted);text-decoration:none;text-transform:uppercase;">Mon espace</a>
+    <span id="navUserName" style="font-size:11px;color:var(--gold);letter-spacing:0.08em;"></span>
+  </div>
+</header>
+
+<main class="hero">
+  <h1>Partage une vidéo.<br><em>Capture la réaction.</em></h1>
+  <p class="subtitle">Génère un lien · Le spectateur est filmé · Tu récupères sa réaction</p>
+
+  <div class="drop-zone" id="dropZone">
+    <svg class="drop-icon" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.5">
+      <rect x="6" y="6" width="36" height="36" rx="4"/>
+      <polygon points="19,16 33,24 19,32" fill="currentColor" stroke="none" opacity="0.4"/>
+    </svg>
+    <p class="drop-label"><strong>Glisse ta vidéo ici</strong></p>
+    <p class="drop-label">ou <strong>clique pour sélectionner</strong></p>
+    <p class="drop-limit">MP4, MOV, WEBM · max 500 MB</p>
+    <input type="file" id="fileInput" accept="video/*">
+  </div>
+
+  <div class="upload-progress" id="uploadProgress">
+    <div class="progress-bar-wrap">
+      <div class="progress-bar" id="progressBar"></div>
+    </div>
+    <p class="progress-label" id="progressLabel">Envoi en cours…</p>
+  </div>
+
+  <div class="result-box" id="resultBox">
+    <p class="result-title">Lien prêt</p>
+    <div class="link-row">
+      <input class="link-input" id="linkInput" type="text" readonly>
+      <button class="copy-btn" id="copyBtn">Copier</button>
+    </div>
+    <button class="upload-another" id="uploadAnother">↩ Uploader une autre vidéo</button>
+  </div>
+
+  <p class="error-msg" id="errorMsg"></p>
+</main>
+
+<section class="steps">
+  <div class="step">
+    <div class="step-num">01</div>
+    <div class="step-title">Upload</div>
+    <p class="step-desc">Dépose ta vidéo sur ce site. Un lien unique est généré instantanément.</p>
+  </div>
+  <div class="step">
+    <div class="step-num">02</div>
+    <div class="step-title">Partage</div>
+    <p class="step-desc">Envoie le lien à tes amis. Ils devront accepter d'activer leur webcam.</p>
+  </div>
+  <div class="step">
+    <div class="step-num">03</div>
+    <div class="step-title">Réaction</div>
+    <p class="step-desc">Leur réaction est capturée. Vidéo combinée générée automatiquement.</p>
+  </div>
+</section>
+
+<footer>
+  <span>© ReactionCam</span>
+  <span>Données traitées selon le RGPD · Consentement explicite requis</span>
+</footer>
+
+<script>
+// Auth check
+fetch('/api/auth/me').then(r => {
+  if (r.ok) r.json().then(u => {
+    document.getElementById('authNav').style.display = 'none';
+    document.getElementById('userNav').style.display = 'flex';
+    document.getElementById('navUserName').textContent = u.name;
+  });
+});
+
+const dropZone = document.getElementById('dropZone');
+const fileInput = document.getElementById('fileInput');
+const uploadProgress = document.getElementById('uploadProgress');
+const progressBar = document.getElementById('progressBar');
+const progressLabel = document.getElementById('progressLabel');
+const resultBox = document.getElementById('resultBox');
+const linkInput = document.getElementById('linkInput');
+const copyBtn = document.getElementById('copyBtn');
+const uploadAnother = document.getElementById('uploadAnother');
+const errorMsg = document.getElementById('errorMsg');
+
+// Drop zone interactions
+dropZone.addEventListener('click', () => fileInput.click());
+
+dropZone.addEventListener('dragover', e => {
+  e.preventDefault();
+  dropZone.classList.add('drag-over');
+});
+
+['dragleave', 'dragend'].forEach(evt =>
+  dropZone.addEventListener(evt, () => dropZone.classList.remove('drag-over'))
+);
+
+dropZone.addEventListener('drop', e => {
+  e.preventDefault();
+  dropZone.classList.remove('drag-over');
+  const file = e.dataTransfer.files[0];
+  if (file) handleFile(file);
+});
+
+fileInput.addEventListener('change', () => {
+  if (fileInput.files[0]) handleFile(fileInput.files[0]);
+});
+
+function handleFile(file) {
+  if (!file.type.startsWith('video/')) {
+    showError('Seuls les fichiers vidéo sont acceptés.');
+    return;
+  }
+  if (file.size > 500 * 1024 * 1024) {
+    showError('Le fichier dépasse la limite de 500 MB.');
+    return;
+  }
+  uploadFile(file);
+}
+
+function uploadFile(file) {
+  errorMsg.style.display = 'none';
+  dropZone.style.display = 'none';
+  uploadProgress.style.display = 'block';
+
+  const formData = new FormData();
+  formData.append('video', file);
+
+  const xhr = new XMLHttpRequest();
+
+  xhr.upload.addEventListener('progress', e => {
+    if (e.lengthComputable) {
+      const pct = Math.round((e.loaded / e.total) * 100);
+      progressBar.style.width = pct + '%';
+      progressLabel.textContent = `Envoi en cours… ${pct}%`;
+    }
+  });
+
+  xhr.addEventListener('load', () => {
+    if (xhr.status === 200) {
+      const data = JSON.parse(xhr.responseText);
+      showResult(data.link);
+    } else {
+      uploadProgress.style.display = 'none';
+      dropZone.style.display = '';
+      showError('Erreur lors de l\'envoi. Réessaie.');
+    }
+  });
+
+  xhr.addEventListener('error', () => {
+    uploadProgress.style.display = 'none';
+    dropZone.style.display = '';
+    showError('Erreur réseau. Vérifie ta connexion.');
+  });
+
+  xhr.open('POST', '/upload');
+  xhr.send(formData);
+}
+
+function showResult(link) {
+  uploadProgress.style.display = 'none';
+  resultBox.style.display = 'block';
+  linkInput.value = link;
+}
+
+function showError(msg) {
+  errorMsg.textContent = msg;
+  errorMsg.style.display = 'block';
+}
+
+copyBtn.addEventListener('click', () => {
+  navigator.clipboard.writeText(linkInput.value).then(() => {
+    copyBtn.textContent = '✓ Copié';
+    copyBtn.classList.add('copied');
+    setTimeout(() => {
+      copyBtn.textContent = 'Copier';
+      copyBtn.classList.remove('copied');
+    }, 2000);
+  });
+});
+
+uploadAnother.addEventListener('click', () => {
+  resultBox.style.display = 'none';
+  dropZone.style.display = '';
+  fileInput.value = '';
+  progressBar.style.width = '0%';
+});
+</script>
+</body>
+</html>
