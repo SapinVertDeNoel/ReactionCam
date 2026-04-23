@@ -11,6 +11,10 @@ const FileSync = require('lowdb/adapters/FileSync');
 const app  = express();
 const PORT = process.env.PORT || 3000;
 
+// Render (et la plupart des hébergeurs) est derrière un reverse proxy
+// Sans ça, req.secure est toujours false et les cookies session ne passent pas
+app.set('trust proxy', 1);
+
 // ── Chemins : /tmp en prod (Render), local sinon ──────────────────────────────
 // Render a un filesystem en lecture seule sauf /tmp
 const IS_PROD   = process.env.NODE_ENV === 'production' || process.env.RENDER;
@@ -57,6 +61,7 @@ app.use('/reactions', express.static(DIRS.reactions));
 
 // ── Auth guard ────────────────────────────────────────────────────────────────
 function requireAuth(req, res, next) {
+  console.log('[AUTH] sessionID:', req.sessionID, '| userId:', req.session.userId || 'none');
   if (!req.session.userId) return res.status(401).json({ error: 'Non connecté' });
   next();
 }
