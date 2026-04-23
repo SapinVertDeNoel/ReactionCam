@@ -1,42 +1,71 @@
-const express  = require('express');
-const multer   = require('multer');
-const { v4: uuidv4 } = require('uuid');
-const path     = require('path');
-const fs       = require('fs');
-const bcrypt   = require('bcrypt');
-const session  = require('express-session');
-const low      = require('lowdb');
-const FileSync = require('lowdb/adapters/FileSync');
+require('dotenv').config();
+
+const express    = require('express');
+const multer     = require('multer');
+const path       = require('path');
+const bcrypt     = require('bcrypt');
+const session    = require('express-session');
+const mongoose   = require('mongoose');
+const MongoStore = require('connect-mongo');
+const cloudinary = require('cloudinary').v2;
+const { CloudinaryStorage } = require('multer-storage-cloudinary');
 
 const app  = express();
 const PORT = process.env.PORT || 3000;
+const IS_PROD = process.env.NODE_ENV === 'production' || !!process.env.RENDER;
 
-// Render (et la plupart des hébergeurs) est derrière un reverse proxy
+// ── Variables d'environnement requises ────────────────────────────────────────
+const REQUIRED_ENV = ['MONGODB_URI', 'CLOUDINARY_CLOUD_NAME', 'CLOUDINARY_API_KEY', 'CLOUDINARY_API_SECRET'];
+const missing = REQUIRED_ENV.filter(k => !process.env[k]);
+if (missing.length) {
+  console.error('❌ Variables manquantes :', missing.join(', '));
+  console.error('   Crée un fichier .env en te basant sur .env.example');
+  process.exit(1);
+}
+
+// ── Cloudinary ────────────────────────────────────────────────────────────────
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key:    process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET
+});
+
+// ── MongoDB ───────────────────────────────────────────────────────────────────
+mongoose.connect(process.env.MONGODB_URI)
+  .then(() => console.log('✅ MongoDB connecté'))
+  .catch(err => { console.error('❌ MongoDB :', err.message); process.exit(1); });
+
+// ── Modèles ───────────────────────────────────────────────────────────────────
+const User = mongoose.model('User', new mongoose.Schema({
+  email:     { type: String, unique: true, lowercase: true, required: true },
+  password:  { type: String, required: true },
+  name:      { type: String, required: true },
+  createdAt: { type: Date, default: Date.now }
+}));
+
+const Video = mongoose.model('Video', new mongoose.Schema({
+  userId:       { type: mongoose.Schema.Types.ObjectId, required: true },
+  cloudinaryId: { type: String, required: true },
+  url:          { type: String, required: true },
+  originalName: String,
+  size:         Number,
+  createdAt:    { type: Date, default: Date.now }
+}));
+
+const Reaction = mongoose.model('Reaction', new mongoose.Schema({
+  videoId:      { type: mongoose.Schema.Types.ObjectId, required: true },
+  viewerName:   String,
+  cloudinaryId: { type: String, required: true },
+  url:          { type: String, required: true },
+  createdAt:    { type: Date, default: Date.now }
+}));
+
+// ── App ───────────────────────────────────────────────────────────────────────
 app.set('trust proxy', 1);
 
-// ── Chemins ───────────────────────────────────────────────────────────────────
-const IS_PROD  = process.env.NODE_ENV === 'production' || !!process.env.RENDER;
-const BASE_DIR = IS_PROD ? '/tmp/reactioncam' : __dirname;
-
-const DIRS = {
-  uploads:   path.join(BASE_DIR, 'uploads'),
-  reactions: path.join(BASE_DIR, 'reactions'),
-  data:      path.join(BASE_DIR, 'data'),
-};
-
-Object.values(DIRS).forEach(d => fs.mkdirSync(d, { recursive: true }));
-
-console.log(`📁 Stockage : ${BASE_DIR} (${IS_PROD ? 'PROD' : 'DEV'})`);
-
-// ── DB ────────────────────────────────────────────────────────────────────────
-const adapter = new FileSync(path.join(DIRS.data, 'db.json'));
-const db = low(adapter);
-db.defaults({ users: [], videos: [], reactions: [] }).write();
-
-// ── Sessions ──────────────────────────────────────────────────────────────────
-// MemoryStore : pas de dépendance fichier, fiable sur Render single-instance.
-// Les sessions sont perdues au redémarrage, mais elles fonctionnent de façon fiable.
+// ── Sessions dans MongoDB ─────────────────────────────────────────────────────
 app.use(session({
+  store: MongoStore.create({ mongoUrl: process.env.MONGODB_URI }),
   secret: process.env.SESSION_SECRET || 'reactioncam-dev-secret',
   resave: false,
   saveUninitialized: false,
@@ -52,37 +81,30 @@ app.use(session({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
-app.use('/uploads',   express.static(DIRS.uploads));
-app.use('/reactions', express.static(DIRS.reactions));
 
 // ── Auth guard ────────────────────────────────────────────────────────────────
 function requireAuth(req, res, next) {
-  console.log('[AUTH] sessionID:', req.sessionID, '| userId:', req.session.userId || 'none');
   if (!req.session.userId) return res.status(401).json({ error: 'Non connecté' });
   next();
 }
 
-// ── Multer ────────────────────────────────────────────────────────────────────
+// ── Multer → Cloudinary (streaming direct, rien écrit sur disque) ─────────────
 const uploadVideo = multer({
-  storage: multer.diskStorage({
-    destination: DIRS.uploads,
-    filename: (req, file, cb) => {
-      const id = uuidv4();
-      req.generatedId = id;
-      cb(null, `${id}${path.extname(file.originalname) || '.mp4'}`);
-    }
+  storage: new CloudinaryStorage({
+    cloudinary,
+    params: { folder: 'reactioncam/videos', resource_type: 'video' }
   }),
-  limits: { fileSize: 500 * 1024 * 1024 },
+  limits:     { fileSize: 500 * 1024 * 1024 },
   fileFilter: (req, file, cb) =>
     file.mimetype.startsWith('video/') ? cb(null, true) : cb(new Error('Fichier vidéo uniquement'))
 });
 
 const uploadReaction = multer({
-  storage: multer.diskStorage({
-    destination: DIRS.reactions,
-    filename: (req, file, cb) => cb(null, `${uuidv4()}.webm`)
+  storage: new CloudinaryStorage({
+    cloudinary,
+    params: { folder: 'reactioncam/reactions', resource_type: 'video' }
   }),
-  limits: { fileSize: 500 * 1024 * 1024 }
+  limits: { fileSize: 200 * 1024 * 1024 }
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -90,169 +112,169 @@ const uploadReaction = multer({
 // ═══════════════════════════════════════════════════════════════════════════════
 
 app.post('/api/auth/register', async (req, res) => {
-  const { email, password, name } = req.body;
-  if (!email || !password || !name)
-    return res.status(400).json({ error: 'Tous les champs sont requis' });
-  if (password.length < 6)
-    return res.status(400).json({ error: 'Mot de passe trop court (6 caractères min)' });
+  try {
+    const { email, password, name } = req.body;
+    if (!email || !password || !name)
+      return res.status(400).json({ error: 'Tous les champs sont requis' });
+    if (password.length < 6)
+      return res.status(400).json({ error: 'Mot de passe trop court (6 caractères min)' });
 
-  if (db.get('users').find({ email: email.toLowerCase() }).value())
-    return res.status(409).json({ error: 'Email déjà utilisé' });
+    if (await User.findOne({ email: email.toLowerCase() }))
+      return res.status(409).json({ error: 'Email déjà utilisé' });
 
-  const hash = await bcrypt.hash(password, 10);
-  const user = { id: uuidv4(), email: email.toLowerCase(), name, password: hash, createdAt: Date.now() };
-  db.get('users').push(user).write();
+    const hash = await bcrypt.hash(password, 10);
+    const user = await User.create({ email: email.toLowerCase(), name, password: hash });
 
-  req.session.userId   = user.id;
-  req.session.userName = user.name;
-  req.session.save((err) => {
-    if (err) console.error('[REGISTER] Erreur save session:', err);
-    console.log('[REGISTER] OK:', user.email);
-    res.json({ id: user.id, name: user.name, email: user.email });
-  });
+    req.session.userId   = user._id.toString();
+    req.session.userName = user.name;
+    await req.session.save();
+
+    res.json({ id: user._id, name: user.name, email: user.email });
+  } catch (e) {
+    console.error('[REGISTER]', e.message);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
 });
 
 app.post('/api/auth/login', async (req, res) => {
-  const { email, password } = req.body;
-  console.log('[LOGIN] Tentative:', email);
-  const user = db.get('users').find({ email: (email || '').toLowerCase() }).value();
-  if (!user) {
-    console.log('[LOGIN] User non trouvé');
-    return res.status(401).json({ error: 'Email ou mot de passe incorrect' });
-  }
+  try {
+    const { email, password } = req.body;
+    const user = await User.findOne({ email: (email || '').toLowerCase() });
+    if (!user || !(await bcrypt.compare(password || '', user.password)))
+      return res.status(401).json({ error: 'Email ou mot de passe incorrect' });
 
-  const ok = await bcrypt.compare(password || '', user.password);
-  if (!ok) {
-    console.log('[LOGIN] Mauvais mot de passe');
-    return res.status(401).json({ error: 'Email ou mot de passe incorrect' });
-  }
+    req.session.userId   = user._id.toString();
+    req.session.userName = user.name;
+    await req.session.save();
 
-  req.session.userId   = user.id;
-  req.session.userName = user.name;
-  req.session.save((err) => {
-    if (err) console.error('[LOGIN] Erreur save session:', err);
-    console.log('[LOGIN] OK, sessionID:', req.sessionID, 'userId:', user.id);
-    res.json({ id: user.id, name: user.name, email: user.email });
-  });
+    res.json({ id: user._id, name: user.name, email: user.email });
+  } catch (e) {
+    console.error('[LOGIN]', e.message);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
 });
 
 app.post('/api/auth/logout', (req, res) => {
   req.session.destroy(() => res.json({ ok: true }));
 });
 
-app.get('/api/auth/me', (req, res) => {
+app.get('/api/auth/me', async (req, res) => {
   if (!req.session.userId) return res.status(401).json({ error: 'Non connecté' });
-  const user = db.get('users').find({ id: req.session.userId }).value();
-  if (!user) return res.status(401).json({ error: 'Introuvable' });
-  res.json({ id: user.id, name: user.name, email: user.email });
+  try {
+    const user = await User.findById(req.session.userId);
+    if (!user) return res.status(401).json({ error: 'Introuvable' });
+    res.json({ id: user._id, name: user.name, email: user.email });
+  } catch (e) {
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// VIDEOS
+// VIDÉOS
 // ═══════════════════════════════════════════════════════════════════════════════
 
-app.post('/upload', requireAuth, (req, res, next) => {
-  console.log('[UPLOAD] Début, userId:', req.session.userId);
-  uploadVideo.single('video')(req, res, (err) => {
+app.post('/upload', requireAuth, (req, res) => {
+  uploadVideo.single('video')(req, res, async (err) => {
     if (err) {
-      console.error('[UPLOAD] Erreur multer:', err.message);
+      console.error('[UPLOAD]', err.message);
       return res.status(400).json({ error: err.message });
     }
-    if (!req.file) {
-      console.error('[UPLOAD] Aucun fichier reçu');
-      return res.status(400).json({ error: 'Aucun fichier reçu' });
-    }
-    console.log('[UPLOAD] OK:', req.file.filename, req.file.size, 'bytes');
-    const id = req.generatedId;
+    if (!req.file) return res.status(400).json({ error: 'Aucun fichier reçu' });
+
     try {
-      db.get('videos').push({
-        id,
+      const video = await Video.create({
         userId:       req.session.userId,
-        filename:     req.file.filename,
+        cloudinaryId: req.file.filename,
+        url:          req.file.path,
         originalName: req.file.originalname,
-        size:         req.file.size,
-        createdAt:    Date.now()
-      }).write();
-      res.json({ id, link: `${req.protocol}://${req.get('host')}/watch/${id}` });
+        size:         req.file.size
+      });
+      res.json({ id: video._id, link: `${req.protocol}://${req.get('host')}/watch/${video._id}` });
     } catch (e) {
-      console.error('[UPLOAD] Erreur DB:', e.message);
-      res.status(500).json({ error: 'Erreur DB: ' + e.message });
+      console.error('[UPLOAD DB]', e.message);
+      res.status(500).json({ error: 'Erreur base de données' });
     }
   });
 });
 
-app.get('/api/video/:id', (req, res) => {
-  const video = db.get('videos').find({ id: req.params.id }).value();
-  if (!video) return res.status(404).json({ error: 'Vidéo introuvable' });
-  res.json({ url: `/uploads/${video.filename}` });
+app.get('/api/video/:id', async (req, res) => {
+  try {
+    const video = await Video.findById(req.params.id);
+    if (!video) return res.status(404).json({ error: 'Vidéo introuvable' });
+    res.json({ url: video.url });
+  } catch {
+    res.status(404).json({ error: 'Vidéo introuvable' });
+  }
 });
 
-app.get('/api/dashboard', requireAuth, (req, res) => {
-  const videos = db.get('videos')
-    .filter({ userId: req.session.userId })
-    .orderBy(['createdAt'], ['desc'])
-    .value();
+app.get('/api/dashboard', requireAuth, async (req, res) => {
+  try {
+    const videos = await Video.find({ userId: req.session.userId }).sort({ createdAt: -1 });
 
-  const result = videos.map(v => {
-    const reactions = db.get('reactions')
-      .filter({ videoId: v.id })
-      .orderBy(['createdAt'], ['desc'])
-      .value();
+    const result = await Promise.all(videos.map(async v => {
+      const reactions = await Reaction.find({ videoId: v._id }).sort({ createdAt: -1 });
+      return {
+        id:           v._id,
+        url:          v.url,
+        originalName: v.originalName,
+        size:         v.size,
+        createdAt:    v.createdAt,
+        reactions: reactions.map(r => ({
+          id:         r._id,
+          viewerName: r.viewerName || 'Anonyme',
+          url:        r.url,
+          createdAt:  r.createdAt,
+          ready:      true
+        }))
+      };
+    }));
 
-    return {
-      ...v,
-      reactions: reactions.map(r => ({
-        id:         r.id,
-        viewerName: r.viewerName || 'Anonyme',
-        url:        r.filename ? `/reactions/${r.filename}` : null,
-        createdAt:  r.createdAt,
-        ready:      true
-      }))
-    };
-  });
-
-  res.json({ videos: result });
+    res.json({ videos: result });
+  } catch (e) {
+    console.error('[DASHBOARD]', e.message);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// REACTIONS
+// RÉACTIONS
 // ═══════════════════════════════════════════════════════════════════════════════
 
 app.post('/reaction/:id',
   uploadReaction.fields([{ name: 'reaction', maxCount: 1 }, { name: 'viewerName', maxCount: 1 }]),
-  (req, res) => {
+  async (req, res) => {
     const file = req.files?.['reaction']?.[0];
     if (!file) return res.status(400).json({ error: 'Aucune réaction reçue' });
 
-    const video = db.get('videos').find({ id: req.params.id }).value();
-    if (!video) return res.status(404).json({ error: 'Vidéo introuvable' });
+    try {
+      const video = await Video.findById(req.params.id);
+      if (!video) return res.status(404).json({ error: 'Vidéo introuvable' });
 
-    const reactionId = uuidv4();
-    const viewerName = req.body?.viewerName || 'Anonyme';
+      const reaction = await Reaction.create({
+        videoId:      video._id,
+        viewerName:   req.body?.viewerName || 'Anonyme',
+        cloudinaryId: file.filename,
+        url:          file.path
+      });
 
-    db.get('reactions').push({
-      id:        reactionId,
-      videoId:   req.params.id,
-      viewerName,
-      filename:  file.filename,
-      createdAt: Date.now()
-    }).write();
-
-    res.json({ reactionId, url: `/reactions/${file.filename}` });
+      res.json({ reactionId: reaction._id, url: reaction.url });
+    } catch (e) {
+      console.error('[REACTION]', e.message);
+      res.status(500).json({ error: 'Erreur serveur' });
+    }
   }
 );
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // PAGES
 // ═══════════════════════════════════════════════════════════════════════════════
-const pub = p => res => res.sendFile(path.join(__dirname, 'public', p));
 app.get('/watch/:id',  (req, res) => res.sendFile(path.join(__dirname, 'public', 'watch.html')));
 app.get('/dashboard',  (req, res) => res.sendFile(path.join(__dirname, 'public', 'dashboard.html')));
 app.get('/login',      (req, res) => res.sendFile(path.join(__dirname, 'public', 'login.html')));
 app.get('/register',   (req, res) => res.sendFile(path.join(__dirname, 'public', 'login.html')));
 
 app.use((err, req, res, next) => {
-  console.error('Erreur :', err.message);
+  console.error('Erreur globale :', err.message);
   res.status(500).json({ error: err.message });
 });
 
