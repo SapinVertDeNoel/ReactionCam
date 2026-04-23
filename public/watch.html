@@ -128,12 +128,13 @@ html, body {
 
 /* ── Écran caméra ── */
 .cam-wrap {
-  width: 100%; max-width: 300px;
-  aspect-ratio: 16/9;
+  width: 100%; max-width: 280px;
+  max-height: 55vh;
   background: #000; border: 1px solid var(--border); border-radius: 3px;
   overflow: hidden; margin: 18px auto 0; position: relative;
+  aspect-ratio: 4/3; /* ratio par défaut, écrasé en JS dès les métadonnées */
 }
-#camPreview { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
+#camPreview { width: 100%; height: 100%; object-fit: contain; transform: scaleX(-1); }
 .cam-label {
   position: absolute; bottom: 8px; left: 0; right: 0;
   text-align: center; font-size: 10px; letter-spacing: 0.1em;
@@ -390,9 +391,16 @@ async function requestCam() {
       audio: true
     });
 
-    document.getElementById('camPreview').srcObject = webcamStream;
+    const camPreviewEl = document.getElementById('camPreview');
+    camPreviewEl.srcObject = webcamStream;
     statusEl.textContent = '✓ Caméra active';
     statusEl.style.color = 'var(--green)';
+
+    // Ajuste le wrapper au vrai ratio de la caméra (portrait sur mobile)
+    camPreviewEl.addEventListener('loadedmetadata', () => {
+      const { videoWidth: vw, videoHeight: vh } = camPreviewEl;
+      if (vw && vh) document.querySelector('.cam-wrap').style.aspectRatio = `${vw} / ${vh}`;
+    }, { once: true });
 
     // Le bouton doit être cliqué par l'utilisateur (geste réel requis sur iOS
     // pour débloquer AudioContext et video.play()).
@@ -419,61 +427,68 @@ async function startExperience() {
   const recCanvas = document.getElementById('recordCanvas');
   const rctx      = recCanvas.getContext('2d');
 
-  // Résolution interne fixe
-  const W = 1280, H = 720;
-  canvas.width    = W; canvas.height    = H;
-  recCanvas.width = W; recCanvas.height = H;
-
-  // Taille d'affichage : remplit l'écran en préservant le ratio 16:9
-  function resizeCanvas() {
-    const scaleW = window.innerWidth  / W;
-    const scaleH = window.innerHeight / H;
-    const scale  = Math.min(scaleW, scaleH);
-    canvas.style.width  = Math.round(W * scale) + 'px';
-    canvas.style.height = Math.round(H * scale) + 'px';
-    canvas.style.display = 'block';
-    canvas.style.margin  = 'auto';
-  }
-  resizeCanvas();
-  window.addEventListener('resize', resizeCanvas);
-
-  // Vidéo originale — muted pour que play() marche sans geste direct
-  originalVideo             = document.createElement('video');
-  originalVideo.src         = window._videoUrl;
-  originalVideo.crossOrigin = 'anonymous';
-  originalVideo.playsInline = true;
-  originalVideo.preload     = 'auto';
-  originalVideo.muted       = true; // l'audio passe par AudioContext ci-dessous
-
-  await new Promise((res, rej) => {
-    originalVideo.addEventListener('canplay', res, { once: true });
-    originalVideo.addEventListener('error',   rej, { once: true });
-  });
-
-  // Webcam
+  // ── 1. Webcam — en premier pour récupérer ses dimensions réelles ─────────────
   const webcamEl       = document.createElement('video');
   webcamEl.srcObject   = webcamStream;
   webcamEl.playsInline = true;
   webcamEl.muted       = true;
   await webcamEl.play();
 
-  // Audio : mic + son vidéo → haut-parleurs + enregistrement
+  const camW  = webcamEl.videoWidth  || 640;
+  const camH  = webcamEl.videoHeight || 480;
+  const camAR = camW / camH; // < 1 = portrait, >= 1 = paysage
+
+  // ── 2. Vidéo originale ───────────────────────────────────────────────────────
+  originalVideo             = document.createElement('video');
+  originalVideo.src         = window._videoUrl;
+  originalVideo.crossOrigin = 'anonymous';
+  originalVideo.playsInline = true;
+  originalVideo.preload     = 'auto';
+  originalVideo.muted       = true;
+
+  await new Promise((res, rej) => {
+    originalVideo.addEventListener('canplay', res, { once: true });
+    originalVideo.addEventListener('error',   rej, { once: true });
+  });
+
+  const vidW  = originalVideo.videoWidth  || 1280;
+  const vidH  = originalVideo.videoHeight || 720;
+  const vidAR = vidW / vidH; // < 1 = portrait, >= 1 = paysage
+
+  // ── 3. Dimensions des canvas ─────────────────────────────────────────────────
+  // Canvas d'enregistrement : orienté selon la webcam (c'est la réaction qui prime)
+  // Canvas d'affichage     : orienté selon la vidéo originale (c'est ce que voit le spectateur)
+  const BASE = 1280;
+
+  const RW = camAR >= 1 ? BASE                    : Math.round(BASE * camAR);
+  const RH = camAR >= 1 ? Math.round(BASE / camAR) : BASE;
+
+  const DW = vidAR >= 1 ? BASE                    : Math.round(BASE * vidAR);
+  const DH = vidAR >= 1 ? Math.round(BASE / vidAR) : BASE;
+
+  canvas.width    = DW; canvas.height    = DH;
+  recCanvas.width = RW; recCanvas.height = RH;
+
+  function resizeCanvas() {
+    const scale = Math.min(window.innerWidth / DW, window.innerHeight / DH);
+    canvas.style.width  = Math.round(DW * scale) + 'px';
+    canvas.style.height = Math.round(DH * scale) + 'px';
+  }
+  resizeCanvas();
+  window.addEventListener('resize', resizeCanvas);
+
+  // ── 4. Audio ─────────────────────────────────────────────────────────────────
   audioCtx = new (window.AudioContext || window.webkitAudioContext)();
   const dest = audioCtx.createMediaStreamDestination();
-
-  audioCtx.createMediaStreamSource(webcamStream).connect(dest); // micro
-
+  audioCtx.createMediaStreamSource(webcamStream).connect(dest);
   const vidSrc = audioCtx.createMediaElementSource(originalVideo);
-  vidSrc.connect(audioCtx.destination); // son vidéo → enceintes
-  vidSrc.connect(dest);                 // son vidéo → enregistrement
+  vidSrc.connect(audioCtx.destination);
+  vidSrc.connect(dest);
 
-  // Recorder sur le canvas caché — mp4 en fallback pour iOS Safari
+  // ── 5. Recorder ──────────────────────────────────────────────────────────────
   const mimeType = [
-    'video/webm;codecs=vp9,opus',
-    'video/webm;codecs=vp8,opus',
-    'video/webm',
-    'video/mp4;codecs=avc1,mp4a.40.2',
-    'video/mp4'
+    'video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm',
+    'video/mp4;codecs=avc1,mp4a.40.2', 'video/mp4'
   ].find(m => MediaRecorder.isTypeSupported(m)) || '';
 
   recorder = new MediaRecorder(
@@ -484,72 +499,82 @@ async function startExperience() {
   recorder.addEventListener('dataavailable', e => { if (e.data.size > 0) chunks.push(e.data); });
   recorder.addEventListener('stop', handleRecordingDone);
 
-  // ── Helpers dessin ──────────────────────────────────────────────────────────
+  // ── 6. Helpers dessin ─────────────────────────────────────────────────────────
+
+  // Dessin "contain" : préserve le ratio source, bandes noires si nécessaire
+  function drawContain(c, src, x, y, w, h) {
+    const sAR = (src.videoWidth || 1) / (src.videoHeight || 1);
+    const dAR = w / h;
+    let dw, dh, dx, dy;
+    if (sAR > dAR) { dw = w;      dh = w / sAR; dx = x;             dy = y + (h - dh) / 2; }
+    else            { dh = h;      dw = h * sAR; dy = y;             dx = x + (w - dw) / 2; }
+    c.drawImage(src, dx, dy, dw, dh);
+  }
+
+  // PiP avec bordure dorée — contenu en contain (jamais de distorsion)
   function pip(c, src, x, y, w, h, mirror) {
-    // Ombre + fond
     c.save();
-    c.shadowColor = 'rgba(0,0,0,0.9)'; c.shadowBlur = 20;
-    c.fillStyle = '#000';
-    c.fillRect(x - 2, y - 2, w + 4, h + 4);
+    c.shadowColor = 'rgba(0,0,0,0.9)'; c.shadowBlur = 16;
+    c.fillStyle = '#000'; c.fillRect(x - 2, y - 2, w + 4, h + 4);
     c.restore();
-    // Image (miroir optionnel)
     if (mirror) {
       c.save(); c.translate(x + w, y); c.scale(-1, 1);
-      c.drawImage(src, 0, 0, w, h);
+      drawContain(c, src, 0, 0, w, h);
       c.restore();
     } else {
-      c.drawImage(src, x, y, w, h);
+      drawContain(c, src, x, y, w, h);
     }
-    // Bordure or
     c.strokeStyle = 'rgba(201,168,76,0.65)';
     c.lineWidth   = 1.5;
     c.strokeRect(x, y, w, h);
   }
 
-  function vignette(c) {
+  function vignette(c, W, H) {
     const g = c.createRadialGradient(W/2, H/2, H*0.2, W/2, H/2, H*0.85);
     g.addColorStop(0, 'rgba(0,0,0,0)');
     g.addColorStop(1, 'rgba(0,0,0,0.55)');
     c.fillStyle = g; c.fillRect(0, 0, W, H);
   }
 
-  // ── Boucle RAF ──────────────────────────────────────────────────────────────
+  // ── 7. Boucle RAF ─────────────────────────────────────────────────────────────
+  const PAD = 18;
   let running = true;
 
   function draw() {
     if (!running) return;
 
-    const vidAR = (originalVideo.videoWidth / originalVideo.videoHeight) || (16/9);
-    const PAD   = 22;
+    // CANVAS VISIBLE — vidéo en contain plein écran, webcam PiP en bas à droite
+    ctx.fillStyle = '#000';
+    ctx.fillRect(0, 0, DW, DH);
+    drawContain(ctx, originalVideo, 0, 0, DW, DH);
+    vignette(ctx, DW, DH);
 
-    // CANVAS VISIBLE — vidéo en grand, webcam en bas à droite
-    ctx.clearRect(0, 0, W, H);
-    ctx.drawImage(originalVideo, 0, 0, W, H);
-    vignette(ctx);
+    // PiP webcam : largeur fixe, hauteur déduite du ratio réel de la cam
+    const pipCW = Math.round(DW * 0.22);
+    const pipCH = Math.round(pipCW / camAR);
+    pip(ctx, webcamEl, DW - pipCW - PAD, DH - pipCH - PAD, pipCW, pipCH, true);
 
-    const cW = Math.round(W * 0.23);
-    const cH = Math.round(cW * (9/16));
-    pip(ctx, webcamEl, W - cW - PAD, H - cH - PAD, cW, cH, true /* miroir */);
-
-    // CANVAS CACHÉ (enregistrement) — webcam en grand, vidéo en haut à gauche
-    rctx.clearRect(0, 0, W, H);
-    rctx.save(); rctx.translate(W, 0); rctx.scale(-1, 1);
-    rctx.drawImage(webcamEl, 0, 0, W, H);
+    // CANVAS D'ENREGISTREMENT — webcam en contain plein écran (miroir), vidéo PiP
+    rctx.fillStyle = '#000';
+    rctx.fillRect(0, 0, RW, RH);
+    rctx.save(); rctx.translate(RW, 0); rctx.scale(-1, 1);
+    drawContain(rctx, webcamEl, 0, 0, RW, RH);
     rctx.restore();
-    vignette(rctx);
+    vignette(rctx, RW, RH);
 
-    const pW = Math.round(W * 0.27);
-    const pH = Math.round(pW / vidAR);
-    pip(rctx, originalVideo, PAD, PAD, pW, pH, false);
+    // PiP vidéo : largeur fixe, hauteur déduite du ratio réel de la vidéo
+    const pipVW = Math.round(RW * 0.28);
+    const pipVH = Math.round(pipVW / vidAR);
+    pip(rctx, originalVideo, PAD, PAD, pipVW, pipVH, false);
 
     rctx.fillStyle = 'rgba(255,255,255,0.07)';
     rctx.font = '10px monospace';
-    rctx.fillText('reactioncam', W - 115, H - 14);
+    rctx.fillText('reactioncam', RW - 115, RH - 14);
 
     requestAnimationFrame(draw);
   }
 
-  // ── Démarrage ───────────────────────────────────────────────────────────────
+  // ── 8. Démarrage ─────────────────────────────────────────────────────────────
   document.getElementById('recBadge').style.display = 'flex';
   recorder.start(500);
   await originalVideo.play();
