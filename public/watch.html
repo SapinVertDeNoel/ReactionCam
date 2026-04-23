@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>ReactionCam</title>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,600;1,300&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet">
 <style>
@@ -20,7 +20,7 @@ html, body {
   color: var(--text);
   font-family: 'DM Mono', monospace;
   font-size: 14px;
-  overflow: hidden; /* évite le scroll pendant la lecture */
+  /* pas de overflow:hidden global — chaque écran gère le sien */
 }
 
 /* ── Écrans ── */
@@ -29,12 +29,17 @@ html, body {
   position: fixed; inset: 0;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  padding: 24px;
+  /* Centrage vertical via pseudo-éléments flexibles :
+     quand le contenu dépasse, ils se réduisent à 0 et l'utilisateur peut scroller */
+  padding: 16px;
+  padding-top: max(16px, env(safe-area-inset-top));
+  padding-bottom: max(16px, env(safe-area-inset-bottom));
   background: var(--bg);
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 .screen.active { display: flex; }
+.screen::before, .screen::after { content: ''; flex: 1; min-height: 12px; }
 
 /* ── Logo fixe ── */
 .logo {
@@ -139,13 +144,14 @@ html, body {
 #screenPlayer {
   padding: 0;
   background: #000;
+  overflow: hidden; /* bloque le scroll uniquement pendant la lecture */
+  justify-content: center;
 }
+#screenPlayer::before, #screenPlayer::after { display: none; }
 #playerCanvas {
-  /* Le canvas prend toute la place dispo en respectant son ratio interne */
   display: block;
   width: 100vw;
   height: 100vh;
-  object-fit: contain; /* ne fonctionne pas sur canvas, on gère en JS */
 }
 
 /* Badge REC */
@@ -177,6 +183,34 @@ html, body {
   to   { opacity: 1; transform: translateY(0); }
 }
 .card { animation: fadeUp 0.4s ease both; }
+
+/* ── Mobile ── */
+@media (max-width: 480px) {
+  .logo { top: 14px; left: 18px; font-size: 15px; }
+  .card { padding: 24px 18px; border-radius: 3px; }
+  .card h2 { font-size: 22px; }
+  .btn { padding: 14px 20px; width: 100%; justify-content: center; }
+  .btn-group { flex-direction: column; align-items: stretch; gap: 8px; }
+  .btn-group .btn { margin-top: 0; }
+  .consent-list { padding: 12px 10px; }
+  .ci { font-size: 10px; gap: 8px; }
+  .cam-wrap { max-width: 100%; }
+  .result-preview { max-width: 100%; }
+  .name-field input { font-size: 16px; /* évite le zoom iOS */ }
+}
+
+/* Orientation portrait sur mobile : suggestion douce */
+@media (max-width: 600px) and (orientation: portrait) {
+  #screenPlayer::after {
+    display: flex;
+    content: 'Rotate for a better view';
+    position: fixed; bottom: 16px; left: 0; right: 0;
+    justify-content: center;
+    font-size: 10px; letter-spacing: 0.12em;
+    color: rgba(255,255,255,0.2);
+    pointer-events: none;
+  }
+}
 </style>
 </head>
 <body>
@@ -253,8 +287,6 @@ html, body {
       <span class="cam-label" id="camStatus">En attente…</span>
     </div>
 
-    <!-- Ce bouton est rendu visible PUIS cliqué automatiquement.
-         Il doit être dans le DOM et visible pour que play() soit autorisé. -->
     <button class="btn" id="btnStart" style="display:none;">
       <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
         <polygon points="2,1 12,6.5 2,12" fill="currentColor"/>
@@ -362,11 +394,9 @@ async function requestCam() {
     statusEl.textContent = '✓ Caméra active';
     statusEl.style.color = 'var(--green)';
 
-    // Rendre le bouton visible (requis pour que .click() soit autorisé)
+    // Le bouton doit être cliqué par l'utilisateur (geste réel requis sur iOS
+    // pour débloquer AudioContext et video.play()).
     btnStart.style.display = 'inline-flex';
-
-    // Auto-clic après un court délai (laisse le navigateur "voir" le bouton)
-    setTimeout(() => btnStart.click(), 300);
 
   } catch (e) {
     errorEl.textContent = e.name === 'NotAllowedError'
@@ -437,9 +467,14 @@ async function startExperience() {
   vidSrc.connect(audioCtx.destination); // son vidéo → enceintes
   vidSrc.connect(dest);                 // son vidéo → enregistrement
 
-  // Recorder sur le canvas caché
-  const mimeType = ['video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm']
-    .find(m => MediaRecorder.isTypeSupported(m));
+  // Recorder sur le canvas caché — mp4 en fallback pour iOS Safari
+  const mimeType = [
+    'video/webm;codecs=vp9,opus',
+    'video/webm;codecs=vp8,opus',
+    'video/webm',
+    'video/mp4;codecs=avc1,mp4a.40.2',
+    'video/mp4'
+  ].find(m => MediaRecorder.isTypeSupported(m)) || '';
 
   recorder = new MediaRecorder(
     new MediaStream([...recCanvas.captureStream(30).getVideoTracks(), ...dest.stream.getAudioTracks()]),
