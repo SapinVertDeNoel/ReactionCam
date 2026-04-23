@@ -46,9 +46,9 @@ app.use(session({
   saveUninitialized: false,
   cookie: {
     maxAge: 7 * 24 * 60 * 60 * 1000,
-    // En prod sur HTTPS : secure + sameSite
-    secure: IS_PROD,
-    sameSite: IS_PROD ? 'none' : 'lax',
+    secure: IS_PROD,      // HTTPS only en prod
+    sameSite: 'lax',      // 'lax' fonctionne pour les requêtes same-origin (notre cas)
+    httpOnly: true
   }
 }));
 
@@ -109,20 +109,35 @@ app.post('/api/auth/register', async (req, res) => {
 
   req.session.userId   = user.id;
   req.session.userName = user.name;
-  res.json({ id: user.id, name: user.name, email: user.email });
+  req.session.save((err) => {
+    if (err) console.error('[REGISTER] Erreur save session:', err);
+    console.log('[REGISTER] OK:', user.email);
+    res.json({ id: user.id, name: user.name, email: user.email });
+  });
 });
 
 app.post('/api/auth/login', async (req, res) => {
   const { email, password } = req.body;
+  console.log('[LOGIN] Tentative:', email);
   const user = db.get('users').find({ email: (email || '').toLowerCase() }).value();
-  if (!user) return res.status(401).json({ error: 'Email ou mot de passe incorrect' });
+  if (!user) {
+    console.log('[LOGIN] User non trouvé');
+    return res.status(401).json({ error: 'Email ou mot de passe incorrect' });
+  }
 
   const ok = await bcrypt.compare(password || '', user.password);
-  if (!ok) return res.status(401).json({ error: 'Email ou mot de passe incorrect' });
+  if (!ok) {
+    console.log('[LOGIN] Mauvais mot de passe');
+    return res.status(401).json({ error: 'Email ou mot de passe incorrect' });
+  }
 
   req.session.userId   = user.id;
   req.session.userName = user.name;
-  res.json({ id: user.id, name: user.name, email: user.email });
+  req.session.save((err) => {
+    if (err) console.error('[LOGIN] Erreur save session:', err);
+    console.log('[LOGIN] OK, sessionID:', req.sessionID, 'userId:', user.id);
+    res.json({ id: user.id, name: user.name, email: user.email });
+  });
 });
 
 app.post('/api/auth/logout', (req, res) => {
@@ -140,18 +155,34 @@ app.get('/api/auth/me', (req, res) => {
 // VIDEOS
 // ═══════════════════════════════════════════════════════════════════════════════
 
-app.post('/upload', requireAuth, uploadVideo.single('video'), (req, res) => {
-  if (!req.file) return res.status(400).json({ error: 'Aucun fichier reçu' });
-  const id = req.generatedId;
-  db.get('videos').push({
-    id,
-    userId:       req.session.userId,
-    filename:     req.file.filename,
-    originalName: req.file.originalname,
-    size:         req.file.size,
-    createdAt:    Date.now()
-  }).write();
-  res.json({ id, link: `${req.protocol}://${req.get('host')}/watch/${id}` });
+app.post('/upload', requireAuth, (req, res, next) => {
+  console.log('[UPLOAD] Début, userId:', req.session.userId);
+  uploadVideo.single('video')(req, res, (err) => {
+    if (err) {
+      console.error('[UPLOAD] Erreur multer:', err.message);
+      return res.status(400).json({ error: err.message });
+    }
+    if (!req.file) {
+      console.error('[UPLOAD] Aucun fichier reçu');
+      return res.status(400).json({ error: 'Aucun fichier reçu' });
+    }
+    console.log('[UPLOAD] OK:', req.file.filename, req.file.size, 'bytes');
+    const id = req.generatedId;
+    try {
+      db.get('videos').push({
+        id,
+        userId:       req.session.userId,
+        filename:     req.file.filename,
+        originalName: req.file.originalname,
+        size:         req.file.size,
+        createdAt:    Date.now()
+      }).write();
+      res.json({ id, link: `${req.protocol}://${req.get('host')}/watch/${id}` });
+    } catch (e) {
+      console.error('[UPLOAD] Erreur DB:', e.message);
+      res.status(500).json({ error: 'Erreur DB: ' + e.message });
+    }
+  });
 });
 
 app.get('/api/video/:id', (req, res) => {
