@@ -388,7 +388,11 @@ async function requestCam() {
   try {
     webcamStream = await navigator.mediaDevices.getUserMedia({
       video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: 'user' },
-      audio: true
+      audio: {
+        echoCancellation: false, // désactive l'annulation d'écho (source des artefacts saccadés)
+        noiseSuppression: false, // désactive la réduction de bruit
+        autoGainControl:  false  // désactive la normalisation automatique du volume
+      }
     });
 
     const camPreviewEl = document.getElementById('camPreview');
