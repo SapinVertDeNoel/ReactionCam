@@ -479,11 +479,27 @@ async function startExperience() {
 
   // ── 4. Audio ─────────────────────────────────────────────────────────────────
   audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  // Force le démarrage — nécessaire sur iOS Safari (AudioContext créé suspendu)
+  await audioCtx.resume();
+
   const dest = audioCtx.createMediaStreamDestination();
-  audioCtx.createMediaStreamSource(webcamStream).connect(dest);
-  const vidSrc = audioCtx.createMediaElementSource(originalVideo);
-  vidSrc.connect(audioCtx.destination);
-  vidSrc.connect(dest);
+
+  // Microphone → enregistrement uniquement (pas dans les enceintes, évite l'écho)
+  // Gain élevé pour que les réactions soient bien captées
+  const micGain = audioCtx.createGain();
+  micGain.gain.value = 1.4;
+  audioCtx.createMediaStreamSource(webcamStream).connect(micGain);
+  micGain.connect(dest);
+
+  // Vidéo → enceintes à volume normal pour le spectateur
+  //       → enregistrement à volume réduit (arrière-plan derrière les réactions)
+  const vidSrc    = audioCtx.createMediaElementSource(originalVideo);
+  const vidGainSpk = audioCtx.createGain();
+  const vidGainRec = audioCtx.createGain();
+  vidGainSpk.gain.value = 1.0;  // volume normal dans les enceintes
+  vidGainRec.gain.value = 0.25; // atténué dans l'enregistrement
+  vidSrc.connect(vidGainSpk); vidGainSpk.connect(audioCtx.destination);
+  vidSrc.connect(vidGainRec); vidGainRec.connect(dest);
 
   // ── 5. Recorder ──────────────────────────────────────────────────────────────
   const mimeType = [
