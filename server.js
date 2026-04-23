@@ -12,25 +12,21 @@ const app  = express();
 const PORT = process.env.PORT || 3000;
 
 // Render (et la plupart des hébergeurs) est derrière un reverse proxy
-// Sans ça, req.secure est toujours false et les cookies session ne passent pas
 app.set('trust proxy', 1);
 
-// ── Chemins : /tmp en prod (Render), local sinon ──────────────────────────────
-// Render a un filesystem en lecture seule sauf /tmp
-const IS_PROD   = process.env.NODE_ENV === 'production' || process.env.RENDER;
-const BASE_DIR  = IS_PROD ? '/tmp/reactioncam' : __dirname;
+// ── Chemins ───────────────────────────────────────────────────────────────────
+const IS_PROD  = process.env.NODE_ENV === 'production' || !!process.env.RENDER;
+const BASE_DIR = IS_PROD ? '/tmp/reactioncam' : __dirname;
 
 const DIRS = {
   uploads:   path.join(BASE_DIR, 'uploads'),
   reactions: path.join(BASE_DIR, 'reactions'),
   data:      path.join(BASE_DIR, 'data'),
-  sessions:  path.join(BASE_DIR, 'data', 'sessions'),
 };
 
-// Crée tous les dossiers nécessaires
 Object.values(DIRS).forEach(d => fs.mkdirSync(d, { recursive: true }));
 
-console.log(`📁 Stockage : ${BASE_DIR}`);
+console.log(`📁 Stockage : ${BASE_DIR} (${IS_PROD ? 'PROD' : 'DEV'})`);
 
 // ── DB ────────────────────────────────────────────────────────────────────────
 const adapter = new FileSync(path.join(DIRS.data, 'db.json'));
@@ -38,16 +34,16 @@ const db = low(adapter);
 db.defaults({ users: [], videos: [], reactions: [] }).write();
 
 // ── Sessions ──────────────────────────────────────────────────────────────────
-const FileStore = require('session-file-store')(session);
+// MemoryStore : pas de dépendance fichier, fiable sur Render single-instance.
+// Les sessions sont perdues au redémarrage, mais elles fonctionnent de façon fiable.
 app.use(session({
-  store: new FileStore({ path: DIRS.sessions, retries: 1 }),
   secret: process.env.SESSION_SECRET || 'reactioncam-dev-secret',
   resave: false,
   saveUninitialized: false,
   cookie: {
     maxAge: 7 * 24 * 60 * 60 * 1000,
-    secure: IS_PROD,      // HTTPS only en prod
-    sameSite: 'lax',      // 'lax' fonctionne pour les requêtes same-origin (notre cas)
+    secure: IS_PROD,
+    sameSite: 'lax',
     httpOnly: true
   }
 }));
