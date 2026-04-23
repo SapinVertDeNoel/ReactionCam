@@ -440,11 +440,14 @@ async function startExperience() {
 
   // ── 2. Vidéo originale ───────────────────────────────────────────────────────
   originalVideo             = document.createElement('video');
-  originalVideo.src         = window._videoUrl;
+  // crossOrigin AVANT src — sinon le navigateur charge sans headers CORS
+  // et createMediaElementSource() échoue silencieusement
   originalVideo.crossOrigin = 'anonymous';
+  originalVideo.src         = window._videoUrl;
   originalVideo.playsInline = true;
   originalVideo.preload     = 'auto';
-  originalVideo.muted       = true;
+  // PAS de muted=true : sur Safari/iOS, muted supprime aussi le flux Web Audio
+  // createMediaElementSource() prend en charge le routing audio (plus de double lecture)
 
   await new Promise((res, rej) => {
     originalVideo.addEventListener('canplay', res, { once: true });
@@ -491,15 +494,21 @@ async function startExperience() {
   audioCtx.createMediaStreamSource(webcamStream).connect(micGain);
   micGain.connect(dest);
 
-  // Vidéo → enceintes à volume normal pour le spectateur
-  //       → enregistrement à volume réduit (arrière-plan derrière les réactions)
-  const vidSrc    = audioCtx.createMediaElementSource(originalVideo);
-  const vidGainSpk = audioCtx.createGain();
-  const vidGainRec = audioCtx.createGain();
-  vidGainSpk.gain.value = 1.0;  // volume normal dans les enceintes
-  vidGainRec.gain.value = 0.25; // atténué dans l'enregistrement
-  vidSrc.connect(vidGainSpk); vidGainSpk.connect(audioCtx.destination);
-  vidSrc.connect(vidGainRec); vidGainRec.connect(dest);
+  // Vidéo → enceintes + enregistrement (atténué)
+  // try/catch : si CORS échoue malgré crossOrigin, on laisse le navigateur gérer l'audio
+  try {
+    const vidSrc     = audioCtx.createMediaElementSource(originalVideo);
+    const vidGainSpk = audioCtx.createGain();
+    const vidGainRec = audioCtx.createGain();
+    vidGainSpk.gain.value = 1.0;  // volume normal dans les enceintes
+    vidGainRec.gain.value = 0.25; // atténué dans l'enregistrement
+    vidSrc.connect(vidGainSpk); vidGainSpk.connect(audioCtx.destination);
+    vidSrc.connect(vidGainRec); vidGainRec.connect(dest);
+  } catch (e) {
+    // Fallback : audio natif du navigateur (pas de mixing, mais au moins audible)
+    originalVideo.muted = false;
+    console.warn('[Audio] Web Audio routing failed, using native playback:', e.message);
+  }
 
   // ── 5. Recorder ──────────────────────────────────────────────────────────────
   const mimeType = [
