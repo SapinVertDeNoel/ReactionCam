@@ -498,16 +498,12 @@ async function startExperience() {
   audioCtx.createMediaStreamSource(webcamStream).connect(micGain);
   micGain.connect(dest);
 
-  // Vidéo → enceintes + enregistrement (atténué)
-  // try/catch : si CORS échoue malgré crossOrigin, on laisse le navigateur gérer l'audio
+  // Vidéo → enceintes uniquement (pas dans l'enregistrement)
   try {
     const vidSrc     = audioCtx.createMediaElementSource(originalVideo);
     const vidGainSpk = audioCtx.createGain();
-    const vidGainRec = audioCtx.createGain();
-    vidGainSpk.gain.value = 1.0;  // volume normal dans les enceintes
-    vidGainRec.gain.value = 0.25; // atténué dans l'enregistrement
+    vidGainSpk.gain.value = 1.0;
     vidSrc.connect(vidGainSpk); vidGainSpk.connect(audioCtx.destination);
-    vidSrc.connect(vidGainRec); vidGainRec.connect(dest);
   } catch (e) {
     // Fallback : audio natif du navigateur (pas de mixing, mais au moins audible)
     originalVideo.muted = false;
