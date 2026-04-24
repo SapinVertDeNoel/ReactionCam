@@ -57,8 +57,9 @@
     padding: 20px 48px;
     border-bottom: 1px solid var(--border);
     gap: 16px;
+    position: relative;
   }
-  header .tagline { flex: 1; text-align: center; }
+  header .tagline { position: absolute; left: 50%; transform: translateX(-50%); pointer-events: none; }
 
   .logo {
     font-family: 'Cormorant Garamond', serif;
