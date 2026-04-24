@@ -390,8 +390,20 @@
       gap: 8px;
       text-align: center;
     }
-    #authNav, #userNav { gap: 8px; }
+    #authNav, #userNav { gap: 6px; }
     #authNav a:first-child { display: none; }
+    /* Retire les bordures des liens nav sur mobile pour éviter le débordement */
+    #authNav a, #userNav a, #navUserName {
+      border: none;
+      background: transparent;
+      padding: 2px 5px;
+    }
+  }
+  @media (max-width: 390px) {
+    /* Très petits écrans : cache "Connexion" et "Tarifs" pour libérer de la place */
+    #authNav a[href="/login"] { display: none; }
+    #userNav a[href="/pricing"] { display: none; }
+    #navUserName { max-width: 72px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   }
 </style>
 <link rel="stylesheet" href="/theme.css">
