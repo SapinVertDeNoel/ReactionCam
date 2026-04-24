@@ -157,10 +157,8 @@ html, body {
 #screenPlayer::before, #screenPlayer::after { display: none; }
 #playerCanvas {
   display: block;
-  max-width: 100vw;
-  max-height: 100dvh; /* dvh évite le problème de barre d'adresse sur mobile */
-  width: auto;
-  height: auto;
+  width: 100vw;
+  height: 100vh;
 }
 
 /* Badge REC */
@@ -356,11 +354,10 @@ html, body {
 <script>
 // ═══ État ═══════════════════════════════════════════════════════════════════
 const videoId = location.pathname.split('/watch/')[1];
-let webcamStream = null;
+let webcamStream  = null;
 let originalVideo = null;
 let recorder      = null;
 let chunks        = [];
-let audioCtx      = null;
 
 // ═══ Utilitaires ════════════════════════════════════════════════════════════
 function showScreen(id) {
@@ -444,8 +441,8 @@ async function startExperience() {
     const sAR = (src.videoWidth || 1) / (src.videoHeight || 1);
     const dAR = w / h;
     let dw, dh, dx, dy;
-    if (sAR > dAR) { dw = w; dh = w / sAR; dx = x;       dy = y + (h - dh) / 2; }
-    else            { dh = h; dw = h * sAR; dy = y;       dx = x + (w - dw) / 2; }
+    if (sAR > dAR) { dw = w; dh = w / sAR; dx = x;   dy = y + (h - dh) / 2; }
+    else            { dh = h; dw = h * sAR; dy = y;   dx = x + (w - dw) / 2; }
     c.drawImage(src, dx, dy, dw, dh);
   }
 
@@ -474,7 +471,18 @@ async function startExperience() {
   }
 
   try {
-    // ── 1. Webcam ────────────────────────────────────────────────────────────────
+    // ── 1. Vidéo originale — MUTED d'abord (iOS autorise play() sans geste si muted)
+    //       On la lance le plus tôt possible, avant tout autre await,
+    //       pour rester dans le contexte du geste utilisateur.
+    originalVideo             = document.createElement('video');
+    originalVideo.src         = window._videoUrl;
+    originalVideo.playsInline = true;
+    originalVideo.muted       = true;  // muted = autorisé sur iOS sans geste
+    originalVideo.preload     = 'auto';
+    // On déclenche play() immédiatement (contexte geste garanti ici)
+    const vidPlayPromise = originalVideo.play().catch(() => {});
+
+    // ── 2. Webcam ────────────────────────────────────────────────────────────────
     const webcamEl       = document.createElement('video');
     webcamEl.srcObject   = webcamStream;
     webcamEl.playsInline = true;
@@ -485,24 +493,19 @@ async function startExperience() {
     const camH  = webcamEl.videoHeight || 480;
     const camAR = camW / camH;
 
-    // ── 2. Vidéo originale ───────────────────────────────────────────────────────
-    originalVideo             = document.createElement('video');
-    originalVideo.crossOrigin = 'anonymous';
-    originalVideo.src         = window._videoUrl;
-    originalVideo.playsInline = true;
-    originalVideo.preload     = 'auto';
-
+    // ── 3. Attendre que la vidéo ait ses métadonnées ─────────────────────────────
     await new Promise((res, rej) => {
-      originalVideo.addEventListener('canplay', res, { once: true });
-      originalVideo.addEventListener('error',   rej, { once: true });
-      setTimeout(rej, 15000); // timeout 15 s au cas où l'événement ne se déclenche pas
+      if (originalVideo.readyState >= 1) { res(); return; }
+      originalVideo.addEventListener('loadedmetadata', res, { once: true });
+      originalVideo.addEventListener('error', () => rej(new Error('Chargement vidéo échoué')), { once: true });
+      setTimeout(() => rej(new Error('Timeout vidéo')), 20000);
     });
 
     const vidW  = originalVideo.videoWidth  || 1280;
     const vidH  = originalVideo.videoHeight || 720;
     const vidAR = vidW / vidH;
 
-    // ── 3. Dimensions des canvas ─────────────────────────────────────────────────
+    // ── 4. Dimensions canvas ─────────────────────────────────────────────────────
     const BASE = 1280;
     const RW = camAR >= 1 ? BASE                     : Math.round(BASE * camAR);
     const RH = camAR >= 1 ? Math.round(BASE / camAR) : BASE;
@@ -523,62 +526,33 @@ async function startExperience() {
     window.addEventListener('resize', resizeCanvas);
     if (window.visualViewport) window.visualViewport.addEventListener('resize', resizeCanvas);
 
-    // ── 4. Audio (robuste — ne bloque pas si ça échoue) ──────────────────────────
-    let recordStream;
-    try {
-      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-      await audioCtx.resume();
+    // ── 5. Audio — mic du webcam stream directement (pas de Web Audio, pas de CORS)
+    //       La vidéo joue nativement avec son propre son (on la démutera après play).
+    //       Le micro de la webcam est capturé via les tracks du stream existant.
+    const micTracks = webcamStream.getAudioTracks();
 
-      const dest    = audioCtx.createMediaStreamDestination();
-      const micGain = audioCtx.createGain();
-      micGain.gain.value = 1.4;
-      audioCtx.createMediaStreamSource(webcamStream).connect(micGain);
-      micGain.connect(dest);
-
-      try {
-        const vidSrc     = audioCtx.createMediaElementSource(originalVideo);
-        const vidGainSpk = audioCtx.createGain();
-        vidGainSpk.gain.value = 1.0;
-        vidSrc.connect(vidGainSpk);
-        vidGainSpk.connect(audioCtx.destination);
-      } catch (e) {
-        originalVideo.muted = false;
-        console.warn('[Audio] Web Audio routing failed, using native playback:', e.message);
-      }
-
-      recordStream = new MediaStream([
-        ...recCanvas.captureStream(30).getVideoTracks(),
-        ...dest.stream.getAudioTracks()
-      ]);
-    } catch (audioErr) {
-      console.warn('[Audio] setup failed, recording without audio:', audioErr.message);
-      originalVideo.muted = false;
-      recordStream = new MediaStream([...recCanvas.captureStream(30).getVideoTracks()]);
-    }
-
-    // ── 5. Recorder ──────────────────────────────────────────────────────────────
+    // ── 6. Recorder ──────────────────────────────────────────────────────────────
     const mimeType = [
       'video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm',
       'video/mp4;codecs=avc1,mp4a.40.2', 'video/mp4'
     ].find(m => MediaRecorder.isTypeSupported(m)) || '';
 
-    recorder = new MediaRecorder(recordStream, { mimeType, videoBitsPerSecond: 3_500_000 });
+    const recTracks = [...recCanvas.captureStream(30).getVideoTracks(), ...micTracks];
+    recorder = new MediaRecorder(new MediaStream(recTracks), { mimeType, videoBitsPerSecond: 3_500_000 });
     chunks = [];
     recorder.addEventListener('dataavailable', e => { if (e.data.size > 0) chunks.push(e.data); });
     recorder.addEventListener('stop', handleRecordingDone);
 
-    // ── 6. Boucle RAF ─────────────────────────────────────────────────────────────
+    // ── 7. Boucle RAF ─────────────────────────────────────────────────────────────
     const PAD = 18;
     let running = true;
 
     function draw() {
       if (!running) return;
-
       ctx.fillStyle = '#000';
       ctx.fillRect(0, 0, DW, DH);
       drawContain(ctx, originalVideo, 0, 0, DW, DH);
       vignette(ctx, DW, DH);
-
       const pipCW = Math.round(DW * 0.22);
       const pipCH = Math.round(pipCW / camAR);
       pip(ctx, webcamEl, DW - pipCW - PAD, DH - pipCH - PAD, pipCW, pipCH, true);
@@ -589,22 +563,20 @@ async function startExperience() {
       drawContain(rctx, webcamEl, 0, 0, RW, RH);
       rctx.restore();
       vignette(rctx, RW, RH);
-
       const pipVW = Math.round(RW * 0.28);
       const pipVH = Math.round(pipVW / vidAR);
       pip(rctx, originalVideo, PAD, PAD, pipVW, pipVH, false);
-
       rctx.fillStyle = 'rgba(255,255,255,0.07)';
       rctx.font = '10px monospace';
       rctx.fillText('reactioncam', RW - 115, RH - 14);
-
       requestAnimationFrame(draw);
     }
 
-    // ── 7. Démarrage ─────────────────────────────────────────────────────────────
+    // ── 8. Démarrage ─────────────────────────────────────────────────────────────
     document.getElementById('recBadge').style.display = 'flex';
     recorder.start(500);
-    await originalVideo.play();
+    await vidPlayPromise; // s'assure que la lecture est bien lancée
+    originalVideo.muted = false; // démasquer l'audio APRÈS que play() est confirmé
     draw();
 
     originalVideo.addEventListener('ended', () => {
@@ -622,7 +594,6 @@ async function startExperience() {
 function stopRecording() {
   if (recorder?.state !== 'inactive') recorder.stop();
   if (webcamStream) webcamStream.getTracks().forEach(t => t.stop());
-  if (audioCtx)     audioCtx.close();
   document.getElementById('recBadge').style.display = 'none';
 }
 
