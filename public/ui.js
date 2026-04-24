@@ -56,6 +56,17 @@
       'login.link.has-account': 'Déjà un compte ?',
       'login.link.login':       'Se connecter',
 
+      'login.verify.title':       'Vérifie ta boîte mail',
+      'login.verify.desc':        'Un lien de confirmation a été envoyé à',
+      'login.verify.resend':      "Renvoyer l'email",
+      'login.verify.back':        '← Retour à la connexion',
+      'login.verify.resent':      'Email renvoyé !',
+
+      'cookie.text':   'Ce site utilise uniquement un cookie de session (connexion sécurisée) et mémorise tes préférences d\'affichage. Aucun traçage publicitaire.',
+      'cookie.link':   'Politique de confidentialité',
+      'cookie.accept': "J'ai compris",
+      'footer.privacy': 'Politique de confidentialité',
+
       'dashboard.title':                'Mes',
       'dashboard.title.em':             'vidéos',
       'dashboard.empty.title':          'Aucune vidéo pour l\'instant',
@@ -167,6 +178,17 @@
       'login.link.register':    'Sign up',
       'login.link.has-account': 'Already have an account?',
       'login.link.login':       'Log in',
+
+      'login.verify.title':       'Check your inbox',
+      'login.verify.desc':        'A confirmation link was sent to',
+      'login.verify.resend':      'Resend email',
+      'login.verify.back':        '← Back to login',
+      'login.verify.resent':      'Email resent!',
+
+      'cookie.text':   'This site uses only a session cookie (secure login) and stores your display preferences. No advertising tracking.',
+      'cookie.link':   'Privacy policy',
+      'cookie.accept': 'Got it',
+      'footer.privacy': 'Privacy policy',
 
       'dashboard.title':                'My',
       'dashboard.title.em':             'videos',
@@ -280,6 +302,17 @@
       'login.link.has-account': '¿Ya tienes cuenta?',
       'login.link.login':       'Iniciar sesión',
 
+      'cookie.text':   'Este sitio utiliza únicamente una cookie de sesión (inicio de sesión seguro) y guarda tus preferencias de visualización. Sin publicidad ni rastreo.',
+      'cookie.link':   'Política de privacidad',
+      'cookie.accept': 'Entendido',
+      'footer.privacy': 'Política de privacidad',
+
+      'login.verify.title':       'Revisa tu correo',
+      'login.verify.desc':        'Se envió un enlace de confirmación a',
+      'login.verify.resend':      'Reenviar correo',
+      'login.verify.back':        '← Volver al inicio de sesión',
+      'login.verify.resent':      '¡Correo reenviado!',
+
       'dashboard.title':                'Mis',
       'dashboard.title.em':             'vídeos',
       'dashboard.empty.title':          'Sin vídeos por ahora',
@@ -378,7 +411,9 @@
       var v = window.__(el.getAttribute('data-i18n-placeholder'));
       if (v) el.placeholder = v;
     });
-    document.querySelectorAll('.rc-lang-btn').forEach(function (btn) {
+    var label = document.getElementById('rc-lang-label');
+    if (label) label.textContent = lang.toUpperCase();
+    document.querySelectorAll('.rc-lang-menu button').forEach(function (btn) {
       btn.classList.toggle('rc-lang-active', btn.dataset.lang === lang);
     });
     var recStyle = document.getElementById('rc-rec-style');
@@ -433,14 +468,51 @@
       '  transition:color 0.2s, border-color 0.2s;',
       '}',
       '#rc-theme-btn:hover { color:var(--text); border-color:var(--muted); }',
-      '.rc-lang-btn {',
+      '.rc-lang-dd { position:relative; }',
+      '#rc-lang-trigger {',
+      '  display:flex; align-items:center; gap:5px;',
       '  background:none; border:1px solid var(--border); border-radius:2px;',
-      '  padding:4px 7px; color:var(--muted);',
+      '  padding:4px 8px; color:var(--muted);',
       '  font-family:"DM Mono",monospace; font-size:9px; letter-spacing:0.12em;',
-      '  cursor:pointer; transition:all 0.2s;',
+      '  cursor:pointer; transition:color 0.2s, border-color 0.2s; height:28px;',
       '}',
-      '.rc-lang-btn:hover { color:var(--text); border-color:var(--muted); }',
-      '.rc-lang-active { color:var(--gold) !important; border-color:var(--gold-dim) !important; }',
+      '#rc-lang-trigger:hover { color:var(--text); border-color:var(--muted); }',
+      '#rc-lang-trigger svg { flex-shrink:0; transition:transform 0.2s; }',
+      '#rc-lang-trigger.open svg { transform:rotate(180deg); }',
+      '.rc-lang-menu {',
+      '  display:none; position:absolute; right:0; top:calc(100% + 4px);',
+      '  background:var(--surface); border:1px solid var(--border); border-radius:2px;',
+      '  overflow:hidden; z-index:200; min-width:52px;',
+      '}',
+      '.rc-lang-menu.open { display:block; }',
+      '.rc-lang-menu button {',
+      '  display:block; width:100%; padding:7px 12px;',
+      '  background:none; border:none;',
+      '  font-family:"DM Mono",monospace; font-size:9px; letter-spacing:0.12em;',
+      '  color:var(--muted); cursor:pointer; text-align:left;',
+      '  transition:background 0.15s, color 0.15s;',
+      '}',
+      '.rc-lang-menu button:hover { background:var(--surface2,#1a1a1a); color:var(--text); }',
+      '.rc-lang-menu button.rc-lang-active { color:var(--gold); }',
+      /* Cookie banner */
+      '#rc-cookie-banner {',
+      '  position:fixed; bottom:0; left:0; right:0; z-index:900;',
+      '  background:var(--surface); border-top:1px solid var(--border);',
+      '  padding:14px 24px; display:flex; align-items:center;',
+      '  justify-content:space-between; gap:16px; flex-wrap:wrap;',
+      '}',
+      '#rc-cookie-banner p {',
+      '  font-size:11px; color:var(--muted); letter-spacing:0.04em; line-height:1.6; flex:1; min-width:200px;',
+      '}',
+      '#rc-cookie-banner a { color:var(--gold); text-decoration:none; white-space:nowrap; }',
+      '#rc-cookie-banner a:hover { text-decoration:underline; }',
+      '#rc-cookie-accept {',
+      '  flex-shrink:0; padding:8px 18px;',
+      '  background:var(--gold); color:#0a0a0a; border:none; border-radius:2px;',
+      '  font-family:"DM Mono",monospace; font-size:10px; letter-spacing:0.14em; text-transform:uppercase;',
+      '  cursor:pointer; transition:background 0.2s; white-space:nowrap;',
+      '}',
+      '#rc-cookie-accept:hover { background:#e0bb60; }',
     ].join('\n');
     document.head.appendChild(style);
   }
@@ -459,14 +531,67 @@
     });
     mount.appendChild(themeBtn);
 
+    var dd = document.createElement('div');
+    dd.className = 'rc-lang-dd';
+
+    var trigger = document.createElement('button');
+    trigger.id = 'rc-lang-trigger';
+    trigger.innerHTML = '<span id="rc-lang-label">' + window.RC_LANG.toUpperCase() + '</span>'
+      + '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>';
+
+    var menu = document.createElement('div');
+    menu.className = 'rc-lang-menu';
+
     ['fr', 'en', 'es'].forEach(function (l) {
       var btn = document.createElement('button');
-      btn.className = 'rc-lang-btn' + (l === window.RC_LANG ? ' rc-lang-active' : '');
       btn.dataset.lang = l;
       btn.textContent = l.toUpperCase();
-      btn.addEventListener('click', function () { applyLang(l); });
-      mount.appendChild(btn);
+      if (l === window.RC_LANG) btn.classList.add('rc-lang-active');
+      btn.addEventListener('click', function () {
+        applyLang(l);
+        menu.classList.remove('open');
+        trigger.classList.remove('open');
+      });
+      menu.appendChild(btn);
     });
+
+    trigger.addEventListener('click', function (e) {
+      e.stopPropagation();
+      var isOpen = menu.classList.toggle('open');
+      trigger.classList.toggle('open', isOpen);
+    });
+
+    document.addEventListener('click', function () {
+      menu.classList.remove('open');
+      trigger.classList.remove('open');
+    });
+
+    dd.appendChild(trigger);
+    dd.appendChild(menu);
+    mount.appendChild(dd);
+  }
+
+  // ── Cookie banner ─────────────────────────────────────────────────────────────
+  function buildCookieBanner() {
+    if (localStorage.getItem('rc-consent')) return;
+
+    var banner = document.createElement('div');
+    banner.id = 'rc-cookie-banner';
+
+    var text = document.createElement('p');
+    text.innerHTML = window.__('cookie.text') + ' <a href="/privacy">' + window.__('cookie.link') + '</a>';
+
+    var btn = document.createElement('button');
+    btn.id = 'rc-cookie-accept';
+    btn.textContent = window.__('cookie.accept');
+    btn.addEventListener('click', function () {
+      localStorage.setItem('rc-consent', '1');
+      banner.remove();
+    });
+
+    banner.appendChild(text);
+    banner.appendChild(btn);
+    document.body.appendChild(banner);
   }
 
   // ── Init ──────────────────────────────────────────────────────────────────────
@@ -482,5 +607,6 @@
     }
     buildControls();
     applyLang(window.RC_LANG);
+    buildCookieBanner();
   });
 })();

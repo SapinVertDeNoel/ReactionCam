@@ -139,6 +139,20 @@ header { position: fixed; top: 0; left: 0; right: 0; padding: 24px 40px; display
         <p class="divider"><span data-i18n="login.link.has-account">Déjà un compte ?</span> <a href="#" id="goLogin" style="color:var(--gold);text-decoration:none;" data-i18n="login.link.login">Se connecter</a></p>
       </div>
     </div>
+
+    <!-- VÉRIFICATION EMAIL -->
+    <div class="panel" id="panelVerify">
+      <div class="form-body" style="text-align:center;">
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#c9a84c" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:20px;"><rect x="2" y="4" width="20" height="16" rx="2"/><polyline points="2,4 12,13 22,4"/></svg>
+        <p style="font-size:15px;letter-spacing:0.06em;margin-bottom:10px;" data-i18n="login.verify.title">Vérifie ta boîte mail</p>
+        <p style="font-size:12px;color:var(--muted);margin-bottom:6px;" data-i18n="login.verify.desc">Un lien de confirmation a été envoyé à</p>
+        <p style="font-size:13px;color:var(--gold);margin-bottom:28px;" id="verifyEmailAddr"></p>
+        <div class="error" id="resendError" style="text-align:left;"></div>
+        <div id="resendSuccess" style="background:rgba(74,124,89,0.1);border:1px solid rgba(74,124,89,0.3);border-radius:2px;padding:10px 14px;font-size:12px;color:#4a7c59;margin-bottom:16px;display:none;letter-spacing:0.04em;" data-i18n="login.verify.resent">Email renvoyé !</div>
+        <button class="btn-submit" id="btnResend" data-i18n="login.verify.resend">Renvoyer l'email</button>
+        <p class="divider" style="margin-top:20px;"><a href="#" id="goBackLogin" style="color:var(--gold);text-decoration:none;" data-i18n="login.verify.back">← Retour à la connexion</a></p>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -157,26 +171,44 @@ if (urlError === 'google') {
   const el = document.getElementById('globalError');
   el.style.display = 'block';
   el.innerHTML = '<div class="global-error">La connexion Google n\'est pas encore activée.</div>';
+} else if (urlError === 'verify_expired') {
+  const el = document.getElementById('globalError');
+  el.style.display = 'block';
+  el.innerHTML = '<div class="global-error">Ce lien de vérification a expiré ou est invalide. Reconnecte-toi pour en recevoir un nouveau.</div>';
+} else if (urlError === 'verify_invalid') {
+  const el = document.getElementById('globalError');
+  el.style.display = 'block';
+  el.innerHTML = '<div class="global-error">Lien de vérification invalide.</div>';
 }
 
 const tabLogin    = document.getElementById('tabLogin');
 const tabRegister = document.getElementById('tabRegister');
 const panelLogin  = document.getElementById('panelLogin');
 const panelReg    = document.getElementById('panelRegister');
+const panelVerify = document.getElementById('panelVerify');
 
 function showLogin() {
   tabLogin.classList.add('active'); tabRegister.classList.remove('active');
-  panelLogin.classList.add('active'); panelReg.classList.remove('active');
+  panelLogin.classList.add('active'); panelReg.classList.remove('active'); panelVerify.classList.remove('active');
 }
 function showRegister() {
   tabRegister.classList.add('active'); tabLogin.classList.remove('active');
-  panelReg.classList.add('active'); panelLogin.classList.remove('active');
+  panelReg.classList.add('active'); panelLogin.classList.remove('active'); panelVerify.classList.remove('active');
+}
+function showVerify(email) {
+  tabLogin.classList.remove('active'); tabRegister.classList.remove('active');
+  panelLogin.classList.remove('active'); panelReg.classList.remove('active'); panelVerify.classList.add('active');
+  document.getElementById('verifyEmailAddr').textContent = email || '';
+  document.getElementById('resendError').style.display = 'none';
+  document.getElementById('resendSuccess').style.display = 'none';
+  panelVerify._email = email;
 }
 
 tabLogin.addEventListener('click', showLogin);
 tabRegister.addEventListener('click', showRegister);
 document.getElementById('goRegister').addEventListener('click', e => { e.preventDefault(); showRegister(); });
 document.getElementById('goLogin').addEventListener('click', e => { e.preventDefault(); showLogin(); });
+document.getElementById('goBackLogin').addEventListener('click', e => { e.preventDefault(); showLogin(); });
 
 if (location.pathname === '/register') showRegister();
 
@@ -199,8 +231,14 @@ document.getElementById('btnLogin').addEventListener('click', async () => {
     email: document.getElementById('loginEmail').value,
     password: document.getElementById('loginPassword').value
   });
-  if (ok) { location.href = '/dashboard'; }
-  else { setError('loginError', data.error); btn.disabled = false; btn.textContent = window.__('login.btn.login'); }
+  if (ok) {
+    location.href = '/dashboard';
+  } else if (data.needsVerification) {
+    showVerify(data.email);
+  } else {
+    setError('loginError', data.error);
+    btn.disabled = false; btn.textContent = window.__('login.btn.login');
+  }
 });
 
 // REGISTER
@@ -213,8 +251,29 @@ document.getElementById('btnRegister').addEventListener('click', async () => {
     email: document.getElementById('registerEmail').value,
     password: document.getElementById('registerPassword').value
   });
-  if (ok) { location.href = '/dashboard'; }
-  else { setError('registerError', data.error); btn.disabled = false; btn.textContent = window.__('login.btn.register'); }
+  if (ok && data.needsVerification) {
+    showVerify(data.email);
+  } else if (ok) {
+    location.href = '/dashboard';
+  } else {
+    setError('registerError', data.error);
+    btn.disabled = false; btn.textContent = window.__('login.btn.register');
+  }
+});
+
+// RESEND VERIFICATION
+document.getElementById('btnResend').addEventListener('click', async () => {
+  const btn = document.getElementById('btnResend');
+  btn.disabled = true;
+  document.getElementById('resendError').style.display = 'none';
+  document.getElementById('resendSuccess').style.display = 'none';
+  const [ok, data] = await apiPost('/api/auth/resend-verification', { email: panelVerify._email });
+  if (ok) {
+    document.getElementById('resendSuccess').style.display = 'block';
+  } else {
+    setError('resendError', data.error);
+  }
+  setTimeout(() => { btn.disabled = false; }, 30000);
 });
 
 // Enter key

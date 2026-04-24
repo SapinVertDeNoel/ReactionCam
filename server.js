@@ -3,6 +3,7 @@ require('dotenv').config();
 const express    = require('express');
 const multer     = require('multer');
 const path       = require('path');
+const crypto     = require('crypto');
 const bcrypt     = require('bcrypt');
 const session    = require('express-session');
 const mongoose   = require('mongoose');
@@ -12,6 +13,7 @@ const { CloudinaryStorage } = require('multer-storage-cloudinary');
 const cron           = require('node-cron');
 const passport       = require('passport');
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
+const { Resend }     = require('resend');
 
 const app  = express();
 const PORT = process.env.PORT || 3000;
@@ -19,6 +21,10 @@ const IS_PROD = process.env.NODE_ENV === 'production' || !!process.env.RENDER;
 
 const stripe = process.env.STRIPE_SECRET_KEY
   ? require('stripe')(process.env.STRIPE_SECRET_KEY)
+  : null;
+
+const resend = process.env.RESEND_API_KEY
+  ? new Resend(process.env.RESEND_API_KEY)
   : null;
 
 // ── Variables d'environnement requises ────────────────────────────────────────
@@ -58,14 +64,17 @@ function expiresAtForPlan(plan) {
 
 // ── Modèles ───────────────────────────────────────────────────────────────────
 const User = mongoose.model('User', new mongoose.Schema({
-  email:                { type: String, unique: true, lowercase: true, required: true },
-  password:             { type: String }, // optionnel pour les comptes Google
-  googleId:             { type: String, sparse: true, index: true },
-  name:                 { type: String, required: true },
-  plan:                 { type: String, enum: ['free', 'pro', 'admin'], default: 'free' },
-  stripeCustomerId:     String,
-  stripeSubscriptionId: String,
-  createdAt:            { type: Date, default: Date.now }
+  email:                      { type: String, unique: true, lowercase: true, required: true },
+  password:                   { type: String },
+  googleId:                   { type: String, sparse: true, index: true },
+  name:                       { type: String, required: true },
+  plan:                       { type: String, enum: ['free', 'pro', 'admin'], default: 'free' },
+  stripeCustomerId:           String,
+  stripeSubscriptionId:       String,
+  emailVerified:              { type: Boolean, default: false },
+  emailVerificationToken:     { type: String, sparse: true, index: true },
+  emailVerificationExpires:   { type: Date },
+  createdAt:                  { type: Date, default: Date.now }
 }));
 
 const Video = mongoose.model('Video', new mongoose.Schema({
@@ -120,7 +129,8 @@ if (process.env.GOOGLE_CLIENT_ID) {
       if (email) {
         user = await User.findOne({ email });
         if (user) {
-          user.googleId = profile.id;
+          user.googleId      = profile.id;
+          user.emailVerified = true;
           await user.save();
           return done(null, user);
         }
@@ -128,9 +138,10 @@ if (process.env.GOOGLE_CLIENT_ID) {
 
       // Crée un nouveau compte
       user = await User.create({
-        email:    email || `google_${profile.id}@noemail.local`,
-        name:     profile.displayName || 'Utilisateur',
-        googleId: profile.id,
+        email:         email || `google_${profile.id}@noemail.local`,
+        name:          profile.displayName || 'Utilisateur',
+        googleId:      profile.id,
+        emailVerified: true,
       });
       done(null, user);
     } catch (e) {
@@ -207,6 +218,42 @@ function requireAuth(req, res, next) {
   next();
 }
 
+// ── Email verification helper ─────────────────────────────────────────────────
+async function sendVerificationEmail(user, baseUrl) {
+  const token   = crypto.randomBytes(32).toString('hex');
+  const expires = new Date(Date.now() + 24 * 60 * 60 * 1000);
+  user.emailVerificationToken   = token;
+  user.emailVerificationExpires = expires;
+  await user.save();
+
+  const link = `${baseUrl}/api/auth/verify-email?token=${token}`;
+
+  if (!resend) {
+    console.log(`[DEV] Lien de vérification pour ${user.email} : ${link}`);
+    return;
+  }
+
+  await resend.emails.send({
+    from:    'ReactionCam <noreply@reaction-cam.com>',
+    to:      user.email,
+    subject: 'Confirme ton adresse email — ReactionCam',
+    html:    `
+<!DOCTYPE html><html><body style="margin:0;padding:0;background:#0a0a0a;font-family:'Courier New',monospace;color:#e8e0d0;">
+<table width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:40px 20px;">
+<table width="480" cellpadding="0" cellspacing="0" style="background:#111;border:1px solid #1e1e1e;border-radius:4px;">
+  <tr><td style="padding:40px 36px;">
+    <p style="font-size:22px;font-weight:300;letter-spacing:0.12em;color:#c9a84c;margin:0 0 24px;">Reaction<em>Cam</em></p>
+    <p style="font-size:14px;margin:0 0 12px;">Bonjour ${user.name},</p>
+    <p style="font-size:13px;color:#a09080;margin:0 0 28px;line-height:1.6;">Clique sur le bouton ci-dessous pour confirmer ton adresse email et accéder à ton compte.</p>
+    <a href="${link}" style="display:inline-block;padding:14px 28px;background:#c9a84c;color:#0a0a0a;text-decoration:none;font-size:11px;letter-spacing:0.18em;text-transform:uppercase;border-radius:2px;">Confirmer mon email</a>
+    <p style="font-size:11px;color:#5a5245;margin:28px 0 0;line-height:1.6;">Ce lien expire dans 24 heures. Si tu n'as pas créé de compte sur ReactionCam, ignore cet email.</p>
+  </td></tr>
+</table>
+</td></tr></table>
+</body></html>`,
+  });
+}
+
 // ── Multer → Cloudinary ───────────────────────────────────────────────────────
 const uploadVideo = multer({
   storage: new CloudinaryStorage({
@@ -242,13 +289,12 @@ app.post('/api/auth/register', async (req, res) => {
       return res.status(409).json({ error: 'Email déjà utilisé' });
 
     const hash = await bcrypt.hash(password, 10);
-    const user = await User.create({ email: email.toLowerCase(), name, password: hash });
+    const user = await User.create({ email: email.toLowerCase(), name, password: hash, emailVerified: false });
 
-    req.session.userId   = user._id.toString();
-    req.session.userName = user.name;
-    await req.session.save();
+    const baseUrl = `${req.protocol}://${req.get('host')}`;
+    await sendVerificationEmail(user, baseUrl);
 
-    res.json({ id: user._id, name: user.name, email: user.email });
+    res.json({ needsVerification: true, email: user.email });
   } catch (e) {
     console.error('[REGISTER]', e.message);
     res.status(500).json({ error: 'Erreur serveur' });
@@ -265,6 +311,9 @@ app.post('/api/auth/login', async (req, res) => {
     if (!(await bcrypt.compare(password || '', user.password)))
       return res.status(401).json({ error: 'Email ou mot de passe incorrect' });
 
+    if (!user.emailVerified)
+      return res.status(403).json({ error: 'Confirme ton adresse email avant de te connecter.', needsVerification: true, email: user.email });
+
     req.session.userId   = user._id.toString();
     req.session.userName = user.name;
     await req.session.save();
@@ -278,6 +327,51 @@ app.post('/api/auth/login', async (req, res) => {
 
 app.post('/api/auth/logout', (req, res) => {
   req.session.destroy(() => res.json({ ok: true }));
+});
+
+app.get('/api/auth/verify-email', async (req, res) => {
+  const { token } = req.query;
+  if (!token) return res.redirect('/login?error=verify_invalid');
+  try {
+    const user = await User.findOne({
+      emailVerificationToken:   token,
+      emailVerificationExpires: { $gt: new Date() }
+    });
+    if (!user) return res.redirect('/login?error=verify_expired');
+
+    user.emailVerified            = true;
+    user.emailVerificationToken   = undefined;
+    user.emailVerificationExpires = undefined;
+    await user.save();
+
+    req.session.userId   = user._id.toString();
+    req.session.userName = user.name;
+    await req.session.save();
+
+    res.redirect('/dashboard');
+  } catch (e) {
+    console.error('[VERIFY EMAIL]', e.message);
+    res.redirect('/login?error=verify_invalid');
+  }
+});
+
+app.post('/api/auth/resend-verification', async (req, res) => {
+  try {
+    const { email } = req.body;
+    const user = await User.findOne({ email: (email || '').toLowerCase() });
+    if (!user || !user.password)
+      return res.status(400).json({ error: 'Aucun compte trouvé avec cet email.' });
+    if (user.emailVerified)
+      return res.status(400).json({ error: 'Ce compte est déjà vérifié.' });
+
+    const baseUrl = `${req.protocol}://${req.get('host')}`;
+    await sendVerificationEmail(user, baseUrl);
+
+    res.json({ ok: true });
+  } catch (e) {
+    console.error('[RESEND VERIFY]', e.message);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
 });
 
 app.get('/api/auth/me', async (req, res) => {
@@ -496,6 +590,8 @@ app.get('/dashboard',  (req, res) => res.sendFile(path.join(__dirname, 'public',
 app.get('/login',      (req, res) => res.sendFile(path.join(__dirname, 'public', 'login.html')));
 app.get('/register',   (req, res) => res.sendFile(path.join(__dirname, 'public', 'login.html')));
 app.get('/pricing',    (req, res) => res.sendFile(path.join(__dirname, 'public', 'pricing.html')));
+app.get('/privacy',    (req, res) => res.sendFile(path.join(__dirname, 'public', 'privacy.html')));
+app.get('/rgpd',       (req, res) => res.redirect('/privacy'));
 
 app.use((err, req, res, next) => {
   console.error('Erreur globale :', err.message);
