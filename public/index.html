@@ -2,6 +2,8 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
+<script>document.documentElement.setAttribute('data-theme',localStorage.getItem('rc-theme')||'dark')</script>
+<link rel="stylesheet" href="/theme.css">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="description" content="Partage une vidéo et capture les vraies réactions de tes amis. Génère un lien, ils sont filmés en regardant, tu récupères la réaction. Gratuit.">
 <title>ReactionCam — Capture les vraies réactions</title>
@@ -347,6 +349,37 @@
   .hero > *:nth-child(2) { animation-delay: 0.2s; }
   .hero > *:nth-child(3) { animation-delay: 0.3s; }
   .hero > *:nth-child(4) { animation-delay: 0.35s; }
+
+  /* ── Mobile ── */
+  @media (max-width: 600px) {
+    header {
+      padding: 14px 20px;
+      gap: 10px;
+    }
+    header .tagline { display: none; }
+    .logo { font-size: 18px; }
+    .hero {
+      padding: 40px 20px 48px;
+    }
+    h1 { font-size: clamp(34px, 9vw, 56px); margin-bottom: 14px; }
+    .subtitle { font-size: 11px; letter-spacing: 0.06em; margin-bottom: 36px; }
+    .drop-zone { padding: 36px 20px; }
+    .result-box { padding: 20px 18px; }
+    .link-row { flex-direction: column; gap: 10px; }
+    .copy-btn { width: 100%; padding: 14px; }
+    .steps {
+      padding: 40px 20px;
+      gap: 36px;
+    }
+    footer {
+      padding: 16px 20px;
+      flex-direction: column;
+      gap: 8px;
+      text-align: center;
+    }
+    #authNav, #userNav { gap: 8px; }
+    #authNav a:first-child { display: none; }
+  }
 </style>
 </head>
 <body>

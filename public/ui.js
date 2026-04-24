@@ -433,37 +433,10 @@
   var SUN_ICON = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><line x1="12" y1="2" x2="12" y2="5"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="4.22" y1="4.22" x2="6.34" y2="6.34"/><line x1="17.66" y1="17.66" x2="19.78" y2="19.78"/><line x1="2" y1="12" x2="5" y2="12"/><line x1="19" y1="12" x2="22" y2="12"/><line x1="4.22" y1="19.78" x2="6.34" y2="17.66"/><line x1="17.66" y1="6.34" x2="19.78" y2="4.22"/></svg>';
   var MOON_ICON = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>';
 
-  // ── Global styles (light theme + widget) ─────────────────────────────────────
+  // ── Global styles (widget only — light theme is in theme.css) ───────────────
   function injectStyles() {
     var style = document.createElement('style');
     style.textContent = [
-      /* Light theme overrides */
-      '[data-theme="light"] {',
-      '  --bg: #f5f1ea; --surface: #ffffff; --surface2: #f0ebe0;',
-      '  --border: #ddd5c8; --border2: #ccc4b8;',
-      '  --gold: #9a7220; --gold-dim: #b89040;',
-      '  --text: #1c1610; --muted: #7a6a5a; --green: #2d6b42; --red: #c0392b;',
-      '}',
-      '[data-theme="light"] body::before { opacity: 0.10 !important; }',
-      '[data-theme="light"] nav, [data-theme="light"] header { background: rgba(245,241,234,0.97) !important; }',
-      '[data-theme="light"] .drop-zone { background: #faf7f2 !important; }',
-      '[data-theme="light"] .drop-zone:hover, [data-theme="light"] .drop-zone.drag-over { background: #ede7da !important; }',
-      '[data-theme="light"] .result-box { background: #f0ebe0 !important; }',
-      '[data-theme="light"] .reactions-header { background: #ede7da !important; }',
-      '[data-theme="light"] .modal-overlay { background: rgba(0,0,0,0.65) !important; }',
-      '[data-theme="light"] .modal-content video { background: #fff !important; }',
-      '[data-theme="light"] footer { color: #9a8a7a !important; }',
-      '[data-theme="light"] .drop-limit { color: #a09080 !important; }',
-      '[data-theme="light"] .step-num { color: #ccc4b8 !important; }',
-      '[data-theme="light"] .link-input, [data-theme="light"] .field input { background: #f8f5f0 !important; }',
-      '[data-theme="light"] .btn-google { background: #fff !important; }',
-      '[data-theme="light"] .card { background: #fff !important; }',
-      '[data-theme="light"] .tab.active { background: #f8f5f0 !important; }',
-      '[data-theme="light"] .video-card { background: #fff !important; }',
-      '[data-theme="light"] .video-header:hover { background: var(--surface2) !important; }',
-      '[data-theme="light"] .reaction-row:hover { background: var(--surface2) !important; }',
-      '[data-theme="light"] .video-thumb, [data-theme="light"] .reaction-thumb { background: #e8e0d0 !important; }',
-      '[data-theme="light"] .plan-bar { background: #fff !important; }',
       /* Controls widget */
       '#rc-controls-mount { display:flex; align-items:center; gap:6px; }',
       '#rc-theme-btn {',

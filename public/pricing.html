@@ -2,6 +2,8 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
+<script>document.documentElement.setAttribute('data-theme',localStorage.getItem('rc-theme')||'dark')</script>
+<link rel="stylesheet" href="/theme.css">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="description" content="Plans ReactionCam : gratuit pour commencer, Pro pour les créateurs sérieux. Vidéos illimitées, stockage permanent.">
 <title>ReactionCam — Tarifs</title>
@@ -126,9 +128,21 @@
   @media (max-width: 720px) {
     header { padding: 16px 20px; }
     .hero { padding: 48px 20px 40px; }
-    .plans { padding: 0 20px 64px; }
+    .plans { padding: 0 20px 64px; gap: 32px; }
+    .plan-card { width: 100%; padding: 32px 24px; }
     .faq { padding: 0 20px 64px; }
     footer { padding: 20px; flex-direction: column; gap: 8px; }
+  }
+  @media (max-width: 480px) {
+    header { padding: 14px 16px; gap: 8px; }
+    .nav-links { gap: 14px; }
+    .nav-links a:not(.active):not([style]) { display: none; }
+    #navAuth a:first-child { display: none; }
+    .hero { padding: 36px 16px 32px; }
+    .plans { padding: 0 16px 48px; }
+    .plan-card { padding: 28px 18px; }
+    .plan-price .amount { font-size: 36px; }
+    .faq { padding: 0 16px 48px; }
   }
 </style>
 </head>

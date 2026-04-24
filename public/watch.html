@@ -2,6 +2,7 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
+<script>document.documentElement.setAttribute('data-theme',localStorage.getItem('rc-theme')||'dark')</script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="description" content="Regarde cette vidéo et enregistre ta réaction en direct avec ta webcam.">
 <meta name="robots" content="noindex">
@@ -149,14 +150,17 @@ html, body {
 #screenPlayer {
   padding: 0;
   background: #000;
-  overflow: hidden; /* bloque le scroll uniquement pendant la lecture */
+  overflow: hidden;
   justify-content: center;
+  align-items: center;
 }
 #screenPlayer::before, #screenPlayer::after { display: none; }
 #playerCanvas {
   display: block;
-  width: 100vw;
-  height: 100vh;
+  max-width: 100vw;
+  max-height: 100dvh; /* dvh évite le problème de barre d'adresse sur mobile */
+  width: auto;
+  height: auto;
 }
 
 /* Badge REC */
@@ -435,112 +439,16 @@ async function startExperience() {
   const recCanvas = document.getElementById('recordCanvas');
   const rctx      = recCanvas.getContext('2d');
 
-  // ── 1. Webcam — en premier pour récupérer ses dimensions réelles ─────────────
-  const webcamEl       = document.createElement('video');
-  webcamEl.srcObject   = webcamStream;
-  webcamEl.playsInline = true;
-  webcamEl.muted       = true;
-  await webcamEl.play();
-
-  const camW  = webcamEl.videoWidth  || 640;
-  const camH  = webcamEl.videoHeight || 480;
-  const camAR = camW / camH; // < 1 = portrait, >= 1 = paysage
-
-  // ── 2. Vidéo originale ───────────────────────────────────────────────────────
-  originalVideo             = document.createElement('video');
-  // crossOrigin AVANT src — sinon le navigateur charge sans headers CORS
-  // et createMediaElementSource() échoue silencieusement
-  originalVideo.crossOrigin = 'anonymous';
-  originalVideo.src         = window._videoUrl;
-  originalVideo.playsInline = true;
-  originalVideo.preload     = 'auto';
-  // PAS de muted=true : sur Safari/iOS, muted supprime aussi le flux Web Audio
-  // createMediaElementSource() prend en charge le routing audio (plus de double lecture)
-
-  await new Promise((res, rej) => {
-    originalVideo.addEventListener('canplay', res, { once: true });
-    originalVideo.addEventListener('error',   rej, { once: true });
-  });
-
-  const vidW  = originalVideo.videoWidth  || 1280;
-  const vidH  = originalVideo.videoHeight || 720;
-  const vidAR = vidW / vidH; // < 1 = portrait, >= 1 = paysage
-
-  // ── 3. Dimensions des canvas ─────────────────────────────────────────────────
-  // Canvas d'enregistrement : orienté selon la webcam (c'est la réaction qui prime)
-  // Canvas d'affichage     : orienté selon la vidéo originale (c'est ce que voit le spectateur)
-  const BASE = 1280;
-
-  const RW = camAR >= 1 ? BASE                    : Math.round(BASE * camAR);
-  const RH = camAR >= 1 ? Math.round(BASE / camAR) : BASE;
-
-  const DW = vidAR >= 1 ? BASE                    : Math.round(BASE * vidAR);
-  const DH = vidAR >= 1 ? Math.round(BASE / vidAR) : BASE;
-
-  canvas.width    = DW; canvas.height    = DH;
-  recCanvas.width = RW; recCanvas.height = RH;
-
-  function resizeCanvas() {
-    const scale = Math.min(window.innerWidth / DW, window.innerHeight / DH);
-    canvas.style.width  = Math.round(DW * scale) + 'px';
-    canvas.style.height = Math.round(DH * scale) + 'px';
-  }
-  resizeCanvas();
-  window.addEventListener('resize', resizeCanvas);
-
-  // ── 4. Audio ─────────────────────────────────────────────────────────────────
-  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-  // Force le démarrage — nécessaire sur iOS Safari (AudioContext créé suspendu)
-  await audioCtx.resume();
-
-  const dest = audioCtx.createMediaStreamDestination();
-
-  // Microphone → enregistrement uniquement (pas dans les enceintes, évite l'écho)
-  // Gain élevé pour que les réactions soient bien captées
-  const micGain = audioCtx.createGain();
-  micGain.gain.value = 1.4;
-  audioCtx.createMediaStreamSource(webcamStream).connect(micGain);
-  micGain.connect(dest);
-
-  // Vidéo → enceintes uniquement (pas dans l'enregistrement)
-  try {
-    const vidSrc     = audioCtx.createMediaElementSource(originalVideo);
-    const vidGainSpk = audioCtx.createGain();
-    vidGainSpk.gain.value = 1.0;
-    vidSrc.connect(vidGainSpk); vidGainSpk.connect(audioCtx.destination);
-  } catch (e) {
-    // Fallback : audio natif du navigateur (pas de mixing, mais au moins audible)
-    originalVideo.muted = false;
-    console.warn('[Audio] Web Audio routing failed, using native playback:', e.message);
-  }
-
-  // ── 5. Recorder ──────────────────────────────────────────────────────────────
-  const mimeType = [
-    'video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm',
-    'video/mp4;codecs=avc1,mp4a.40.2', 'video/mp4'
-  ].find(m => MediaRecorder.isTypeSupported(m)) || '';
-
-  recorder = new MediaRecorder(
-    new MediaStream([...recCanvas.captureStream(30).getVideoTracks(), ...dest.stream.getAudioTracks()]),
-    { mimeType, videoBitsPerSecond: 3_500_000 }
-  );
-  chunks = [];
-  recorder.addEventListener('dataavailable', e => { if (e.data.size > 0) chunks.push(e.data); });
-  recorder.addEventListener('stop', handleRecordingDone);
-
-  // ── 6. Helpers dessin ─────────────────────────────────────────────────────────
-
-  // Dessin "contain" : préserve le ratio source, bandes noires si nécessaire
+  // ── Helpers dessin ────────────────────────────────────────────────────────────
   function drawContain(c, src, x, y, w, h) {
     const sAR = (src.videoWidth || 1) / (src.videoHeight || 1);
     const dAR = w / h;
     let dw, dh, dx, dy;
-    if (sAR > dAR) { dw = w;      dh = w / sAR; dx = x;             dy = y + (h - dh) / 2; }
-    else            { dh = h;      dw = h * sAR; dy = y;             dx = x + (w - dw) / 2; }
+    if (sAR > dAR) { dw = w; dh = w / sAR; dx = x;       dy = y + (h - dh) / 2; }
+    else            { dh = h; dw = h * sAR; dy = y;       dx = x + (w - dw) / 2; }
     c.drawImage(src, dx, dy, dw, dh);
   }
 
-  // PiP avec bordure dorée — contenu en contain (jamais de distorsion)
   function pip(c, src, x, y, w, h, mirror) {
     c.save();
     c.shadowColor = 'rgba(0,0,0,0.9)'; c.shadowBlur = 16;
@@ -565,54 +473,149 @@ async function startExperience() {
     c.fillStyle = g; c.fillRect(0, 0, W, H);
   }
 
-  // ── 7. Boucle RAF ─────────────────────────────────────────────────────────────
-  const PAD = 18;
-  let running = true;
+  try {
+    // ── 1. Webcam ────────────────────────────────────────────────────────────────
+    const webcamEl       = document.createElement('video');
+    webcamEl.srcObject   = webcamStream;
+    webcamEl.playsInline = true;
+    webcamEl.muted       = true;
+    await webcamEl.play();
 
-  function draw() {
-    if (!running) return;
+    const camW  = webcamEl.videoWidth  || 640;
+    const camH  = webcamEl.videoHeight || 480;
+    const camAR = camW / camH;
 
-    // CANVAS VISIBLE — vidéo en contain plein écran, webcam PiP en bas à droite
-    ctx.fillStyle = '#000';
-    ctx.fillRect(0, 0, DW, DH);
-    drawContain(ctx, originalVideo, 0, 0, DW, DH);
-    vignette(ctx, DW, DH);
+    // ── 2. Vidéo originale ───────────────────────────────────────────────────────
+    originalVideo             = document.createElement('video');
+    originalVideo.crossOrigin = 'anonymous';
+    originalVideo.src         = window._videoUrl;
+    originalVideo.playsInline = true;
+    originalVideo.preload     = 'auto';
 
-    // PiP webcam : largeur fixe, hauteur déduite du ratio réel de la cam
-    const pipCW = Math.round(DW * 0.22);
-    const pipCH = Math.round(pipCW / camAR);
-    pip(ctx, webcamEl, DW - pipCW - PAD, DH - pipCH - PAD, pipCW, pipCH, true);
+    await new Promise((res, rej) => {
+      originalVideo.addEventListener('canplay', res, { once: true });
+      originalVideo.addEventListener('error',   rej, { once: true });
+      setTimeout(rej, 15000); // timeout 15 s au cas où l'événement ne se déclenche pas
+    });
 
-    // CANVAS D'ENREGISTREMENT — webcam en contain plein écran (miroir), vidéo PiP
-    rctx.fillStyle = '#000';
-    rctx.fillRect(0, 0, RW, RH);
-    rctx.save(); rctx.translate(RW, 0); rctx.scale(-1, 1);
-    drawContain(rctx, webcamEl, 0, 0, RW, RH);
-    rctx.restore();
-    vignette(rctx, RW, RH);
+    const vidW  = originalVideo.videoWidth  || 1280;
+    const vidH  = originalVideo.videoHeight || 720;
+    const vidAR = vidW / vidH;
 
-    // PiP vidéo : largeur fixe, hauteur déduite du ratio réel de la vidéo
-    const pipVW = Math.round(RW * 0.28);
-    const pipVH = Math.round(pipVW / vidAR);
-    pip(rctx, originalVideo, PAD, PAD, pipVW, pipVH, false);
+    // ── 3. Dimensions des canvas ─────────────────────────────────────────────────
+    const BASE = 1280;
+    const RW = camAR >= 1 ? BASE                     : Math.round(BASE * camAR);
+    const RH = camAR >= 1 ? Math.round(BASE / camAR) : BASE;
+    const DW = vidAR >= 1 ? BASE                     : Math.round(BASE * vidAR);
+    const DH = vidAR >= 1 ? Math.round(BASE / vidAR) : BASE;
 
-    rctx.fillStyle = 'rgba(255,255,255,0.07)';
-    rctx.font = '10px monospace';
-    rctx.fillText('reactioncam', RW - 115, RH - 14);
+    canvas.width    = DW; canvas.height    = DH;
+    recCanvas.width = RW; recCanvas.height = RH;
 
-    requestAnimationFrame(draw);
+    function resizeCanvas() {
+      const vw = window.visualViewport ? window.visualViewport.width  : window.innerWidth;
+      const vh = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+      const scale = Math.min(vw / DW, vh / DH);
+      canvas.style.width  = Math.round(DW * scale) + 'px';
+      canvas.style.height = Math.round(DH * scale) + 'px';
+    }
+    resizeCanvas();
+    window.addEventListener('resize', resizeCanvas);
+    if (window.visualViewport) window.visualViewport.addEventListener('resize', resizeCanvas);
+
+    // ── 4. Audio (robuste — ne bloque pas si ça échoue) ──────────────────────────
+    let recordStream;
+    try {
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      await audioCtx.resume();
+
+      const dest    = audioCtx.createMediaStreamDestination();
+      const micGain = audioCtx.createGain();
+      micGain.gain.value = 1.4;
+      audioCtx.createMediaStreamSource(webcamStream).connect(micGain);
+      micGain.connect(dest);
+
+      try {
+        const vidSrc     = audioCtx.createMediaElementSource(originalVideo);
+        const vidGainSpk = audioCtx.createGain();
+        vidGainSpk.gain.value = 1.0;
+        vidSrc.connect(vidGainSpk);
+        vidGainSpk.connect(audioCtx.destination);
+      } catch (e) {
+        originalVideo.muted = false;
+        console.warn('[Audio] Web Audio routing failed, using native playback:', e.message);
+      }
+
+      recordStream = new MediaStream([
+        ...recCanvas.captureStream(30).getVideoTracks(),
+        ...dest.stream.getAudioTracks()
+      ]);
+    } catch (audioErr) {
+      console.warn('[Audio] setup failed, recording without audio:', audioErr.message);
+      originalVideo.muted = false;
+      recordStream = new MediaStream([...recCanvas.captureStream(30).getVideoTracks()]);
+    }
+
+    // ── 5. Recorder ──────────────────────────────────────────────────────────────
+    const mimeType = [
+      'video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm',
+      'video/mp4;codecs=avc1,mp4a.40.2', 'video/mp4'
+    ].find(m => MediaRecorder.isTypeSupported(m)) || '';
+
+    recorder = new MediaRecorder(recordStream, { mimeType, videoBitsPerSecond: 3_500_000 });
+    chunks = [];
+    recorder.addEventListener('dataavailable', e => { if (e.data.size > 0) chunks.push(e.data); });
+    recorder.addEventListener('stop', handleRecordingDone);
+
+    // ── 6. Boucle RAF ─────────────────────────────────────────────────────────────
+    const PAD = 18;
+    let running = true;
+
+    function draw() {
+      if (!running) return;
+
+      ctx.fillStyle = '#000';
+      ctx.fillRect(0, 0, DW, DH);
+      drawContain(ctx, originalVideo, 0, 0, DW, DH);
+      vignette(ctx, DW, DH);
+
+      const pipCW = Math.round(DW * 0.22);
+      const pipCH = Math.round(pipCW / camAR);
+      pip(ctx, webcamEl, DW - pipCW - PAD, DH - pipCH - PAD, pipCW, pipCH, true);
+
+      rctx.fillStyle = '#000';
+      rctx.fillRect(0, 0, RW, RH);
+      rctx.save(); rctx.translate(RW, 0); rctx.scale(-1, 1);
+      drawContain(rctx, webcamEl, 0, 0, RW, RH);
+      rctx.restore();
+      vignette(rctx, RW, RH);
+
+      const pipVW = Math.round(RW * 0.28);
+      const pipVH = Math.round(pipVW / vidAR);
+      pip(rctx, originalVideo, PAD, PAD, pipVW, pipVH, false);
+
+      rctx.fillStyle = 'rgba(255,255,255,0.07)';
+      rctx.font = '10px monospace';
+      rctx.fillText('reactioncam', RW - 115, RH - 14);
+
+      requestAnimationFrame(draw);
+    }
+
+    // ── 7. Démarrage ─────────────────────────────────────────────────────────────
+    document.getElementById('recBadge').style.display = 'flex';
+    recorder.start(500);
+    await originalVideo.play();
+    draw();
+
+    originalVideo.addEventListener('ended', () => {
+      running = false;
+      stopRecording();
+    }, { once: true });
+
+  } catch (err) {
+    console.error('[startExperience]', err);
+    showScreen('screenError');
   }
-
-  // ── 8. Démarrage ─────────────────────────────────────────────────────────────
-  document.getElementById('recBadge').style.display = 'flex';
-  recorder.start(500);
-  await originalVideo.play();
-  draw();
-
-  originalVideo.addEventListener('ended', () => {
-    running = false;
-    stopRecording();
-  }, { once: true });
 }
 
 // ═══ Arrêt ═══════════════════════════════════════════════════════════════════
