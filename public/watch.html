@@ -178,11 +178,10 @@ html, body {
 /* ── Écran résultat ── */
 .result-preview {
   width: 100%; max-width: 460px;
-  aspect-ratio: 16/9;
   background: #000; border: 1px solid var(--border); border-radius: 3px;
   overflow: hidden; margin: 20px auto 0;
 }
-#resultVideo { width: 100%; height: 100%; }
+#resultVideo { width: 100%; height: auto; max-height: 70vh; object-fit: contain; display: block; }
 
 /* ── Animations ── */
 @keyframes fadeUp {
@@ -358,6 +357,7 @@ let webcamStream  = null;
 let originalVideo = null;
 let recorder      = null;
 let chunks        = [];
+let audioCtx      = null;
 
 // ═══ Utilitaires ════════════════════════════════════════════════════════════
 function showScreen(id) {
@@ -436,53 +436,8 @@ async function startExperience() {
   const recCanvas = document.getElementById('recordCanvas');
   const rctx      = recCanvas.getContext('2d');
 
-  // ── Helpers dessin ────────────────────────────────────────────────────────────
-  function drawContain(c, src, x, y, w, h) {
-    const sAR = (src.videoWidth || 1) / (src.videoHeight || 1);
-    const dAR = w / h;
-    let dw, dh, dx, dy;
-    if (sAR > dAR) { dw = w; dh = w / sAR; dx = x;   dy = y + (h - dh) / 2; }
-    else            { dh = h; dw = h * sAR; dy = y;   dx = x + (w - dw) / 2; }
-    c.drawImage(src, dx, dy, dw, dh);
-  }
-
-  function pip(c, src, x, y, w, h, mirror) {
-    c.save();
-    c.shadowColor = 'rgba(0,0,0,0.9)'; c.shadowBlur = 16;
-    c.fillStyle = '#000'; c.fillRect(x - 2, y - 2, w + 4, h + 4);
-    c.restore();
-    if (mirror) {
-      c.save(); c.translate(x + w, y); c.scale(-1, 1);
-      drawContain(c, src, 0, 0, w, h);
-      c.restore();
-    } else {
-      drawContain(c, src, x, y, w, h);
-    }
-    c.strokeStyle = 'rgba(201,168,76,0.65)';
-    c.lineWidth   = 1.5;
-    c.strokeRect(x, y, w, h);
-  }
-
-  function vignette(c, W, H) {
-    const g = c.createRadialGradient(W/2, H/2, H*0.2, W/2, H/2, H*0.85);
-    g.addColorStop(0, 'rgba(0,0,0,0)');
-    g.addColorStop(1, 'rgba(0,0,0,0.55)');
-    c.fillStyle = g; c.fillRect(0, 0, W, H);
-  }
-
   try {
-    // ── 1. Vidéo originale — MUTED d'abord (iOS autorise play() sans geste si muted)
-    //       On la lance le plus tôt possible, avant tout autre await,
-    //       pour rester dans le contexte du geste utilisateur.
-    originalVideo             = document.createElement('video');
-    originalVideo.src         = window._videoUrl;
-    originalVideo.playsInline = true;
-    originalVideo.muted       = true;  // muted = autorisé sur iOS sans geste
-    originalVideo.preload     = 'auto';
-    // On déclenche play() immédiatement (contexte geste garanti ici)
-    const vidPlayPromise = originalVideo.play().catch(() => {});
-
-    // ── 2. Webcam ────────────────────────────────────────────────────────────────
+    // ── 1. Webcam ────────────────────────────────────────────────────────────────
     const webcamEl       = document.createElement('video');
     webcamEl.srcObject   = webcamStream;
     webcamEl.playsInline = true;
@@ -493,19 +448,24 @@ async function startExperience() {
     const camH  = webcamEl.videoHeight || 480;
     const camAR = camW / camH;
 
-    // ── 3. Attendre que la vidéo ait ses métadonnées ─────────────────────────────
+    // ── 2. Vidéo originale ───────────────────────────────────────────────────────
+    originalVideo             = document.createElement('video');
+    originalVideo.crossOrigin = 'anonymous'; // requis pour createMediaElementSource
+    originalVideo.src         = window._videoUrl;
+    originalVideo.playsInline = true;
+    originalVideo.preload     = 'auto';
+
     await new Promise((res, rej) => {
-      if (originalVideo.readyState >= 1) { res(); return; }
-      originalVideo.addEventListener('loadedmetadata', res, { once: true });
-      originalVideo.addEventListener('error', () => rej(new Error('Chargement vidéo échoué')), { once: true });
-      setTimeout(() => rej(new Error('Timeout vidéo')), 20000);
+      originalVideo.addEventListener('canplay', res, { once: true });
+      originalVideo.addEventListener('error',   rej, { once: true });
+      setTimeout(() => rej(new Error('Timeout chargement vidéo')), 20000);
     });
 
     const vidW  = originalVideo.videoWidth  || 1280;
     const vidH  = originalVideo.videoHeight || 720;
     const vidAR = vidW / vidH;
 
-    // ── 4. Dimensions canvas ─────────────────────────────────────────────────────
+    // ── 3. Dimensions canvas ─────────────────────────────────────────────────────
     const BASE = 1280;
     const RW = camAR >= 1 ? BASE                     : Math.round(BASE * camAR);
     const RH = camAR >= 1 ? Math.round(BASE / camAR) : BASE;
@@ -516,32 +476,81 @@ async function startExperience() {
     recCanvas.width = RW; recCanvas.height = RH;
 
     function resizeCanvas() {
-      const vw = window.visualViewport ? window.visualViewport.width  : window.innerWidth;
-      const vh = window.visualViewport ? window.visualViewport.height : window.innerHeight;
-      const scale = Math.min(vw / DW, vh / DH);
+      const scale = Math.min(window.innerWidth / DW, window.innerHeight / DH);
       canvas.style.width  = Math.round(DW * scale) + 'px';
       canvas.style.height = Math.round(DH * scale) + 'px';
     }
     resizeCanvas();
     window.addEventListener('resize', resizeCanvas);
-    if (window.visualViewport) window.visualViewport.addEventListener('resize', resizeCanvas);
 
-    // ── 5. Audio — mic du webcam stream directement (pas de Web Audio, pas de CORS)
-    //       La vidéo joue nativement avec son propre son (on la démutera après play).
-    //       Le micro de la webcam est capturé via les tracks du stream existant.
-    const micTracks = webcamStream.getAudioTracks();
+    // ── 4. Audio ─────────────────────────────────────────────────────────────────
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    await audioCtx.resume();
 
-    // ── 6. Recorder ──────────────────────────────────────────────────────────────
+    const dest    = audioCtx.createMediaStreamDestination();
+    const micGain = audioCtx.createGain();
+    micGain.gain.value = 1.4;
+    audioCtx.createMediaStreamSource(webcamStream).connect(micGain);
+    micGain.connect(dest);
+
+    try {
+      const vidSrc     = audioCtx.createMediaElementSource(originalVideo);
+      const vidGainSpk = audioCtx.createGain();
+      vidGainSpk.gain.value = 1.0;
+      vidSrc.connect(vidGainSpk);
+      vidGainSpk.connect(audioCtx.destination);
+    } catch (e) {
+      originalVideo.muted = false;
+      console.warn('[Audio] Web Audio routing failed:', e.message);
+    }
+
+    // ── 5. Recorder ──────────────────────────────────────────────────────────────
     const mimeType = [
       'video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm',
       'video/mp4;codecs=avc1,mp4a.40.2', 'video/mp4'
     ].find(m => MediaRecorder.isTypeSupported(m)) || '';
 
-    const recTracks = [...recCanvas.captureStream(30).getVideoTracks(), ...micTracks];
-    recorder = new MediaRecorder(new MediaStream(recTracks), { mimeType, videoBitsPerSecond: 3_500_000 });
+    recorder = new MediaRecorder(
+      new MediaStream([...recCanvas.captureStream(30).getVideoTracks(), ...dest.stream.getAudioTracks()]),
+      { mimeType, videoBitsPerSecond: 3_500_000 }
+    );
     chunks = [];
     recorder.addEventListener('dataavailable', e => { if (e.data.size > 0) chunks.push(e.data); });
     recorder.addEventListener('stop', handleRecordingDone);
+
+    // ── 6. Helpers dessin ─────────────────────────────────────────────────────────
+    function drawContain(c, src, x, y, w, h) {
+      const sAR = (src.videoWidth || 1) / (src.videoHeight || 1);
+      const dAR = w / h;
+      let dw, dh, dx, dy;
+      if (sAR > dAR) { dw = w; dh = w / sAR; dx = x;   dy = y + (h - dh) / 2; }
+      else            { dh = h; dw = h * sAR; dy = y;   dx = x + (w - dw) / 2; }
+      c.drawImage(src, dx, dy, dw, dh);
+    }
+
+    function pip(c, src, x, y, w, h, mirror) {
+      c.save();
+      c.shadowColor = 'rgba(0,0,0,0.9)'; c.shadowBlur = 16;
+      c.fillStyle = '#000'; c.fillRect(x - 2, y - 2, w + 4, h + 4);
+      c.restore();
+      if (mirror) {
+        c.save(); c.translate(x + w, y); c.scale(-1, 1);
+        drawContain(c, src, 0, 0, w, h);
+        c.restore();
+      } else {
+        drawContain(c, src, x, y, w, h);
+      }
+      c.strokeStyle = 'rgba(201,168,76,0.65)';
+      c.lineWidth   = 1.5;
+      c.strokeRect(x, y, w, h);
+    }
+
+    function vignette(c, W, H) {
+      const g = c.createRadialGradient(W/2, H/2, H*0.2, W/2, H/2, H*0.85);
+      g.addColorStop(0, 'rgba(0,0,0,0)');
+      g.addColorStop(1, 'rgba(0,0,0,0.55)');
+      c.fillStyle = g; c.fillRect(0, 0, W, H);
+    }
 
     // ── 7. Boucle RAF ─────────────────────────────────────────────────────────────
     const PAD = 18;
@@ -575,8 +584,7 @@ async function startExperience() {
     // ── 8. Démarrage ─────────────────────────────────────────────────────────────
     document.getElementById('recBadge').style.display = 'flex';
     recorder.start(500);
-    await vidPlayPromise; // s'assure que la lecture est bien lancée
-    originalVideo.muted = false; // démasquer l'audio APRÈS que play() est confirmé
+    await originalVideo.play();
     draw();
 
     originalVideo.addEventListener('ended', () => {
@@ -594,6 +602,7 @@ async function startExperience() {
 function stopRecording() {
   if (recorder?.state !== 'inactive') recorder.stop();
   if (webcamStream) webcamStream.getTracks().forEach(t => t.stop());
+  if (audioCtx)     audioCtx.close();
   document.getElementById('recBadge').style.display = 'none';
 }
 
