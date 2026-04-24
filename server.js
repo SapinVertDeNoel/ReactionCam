@@ -14,6 +14,8 @@ const cron           = require('node-cron');
 const passport       = require('passport');
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
 const { Resend }     = require('resend');
+const rateLimit      = require('express-rate-limit');
+const compression    = require('compression');
 
 const app  = express();
 const PORT = process.env.PORT || 3000;
@@ -78,7 +80,7 @@ const User = mongoose.model('User', new mongoose.Schema({
 }));
 
 const Video = mongoose.model('Video', new mongoose.Schema({
-  userId:       { type: mongoose.Schema.Types.ObjectId, required: true },
+  userId:       { type: mongoose.Schema.Types.ObjectId, required: true, index: true },
   cloudinaryId: { type: String, required: true },
   url:          { type: String, required: true },
   originalName: String,
@@ -88,7 +90,7 @@ const Video = mongoose.model('Video', new mongoose.Schema({
 }));
 
 const Reaction = mongoose.model('Reaction', new mongoose.Schema({
-  videoId:      { type: mongoose.Schema.Types.ObjectId, required: true },
+  videoId:      { type: mongoose.Schema.Types.ObjectId, required: true, index: true },
   viewerName:   String,
   cloudinaryId: { type: String, required: true },
   url:          { type: String, required: true },
@@ -206,7 +208,29 @@ app.post('/api/billing/webhook',
   }
 );
 
+// ── Rate limiters ─────────────────────────────────────────────────────────────
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  message: { error: 'Trop de tentatives, réessaie dans 15 minutes.' },
+  standardHeaders: true, legacyHeaders: false,
+});
+const resendLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 3,
+  message: { error: 'Trop de demandes d\'envoi. Réessaie dans 1 heure.' },
+  standardHeaders: true, legacyHeaders: false,
+});
+
 // ── Middleware ────────────────────────────────────────────────────────────────
+app.use(compression());
+app.use((req, res, next) => {
+  res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.setHeader('Permissions-Policy', 'camera=(self), microphone=(self), geolocation=()');
+  next();
+});
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(passport.initialize());
@@ -277,7 +301,7 @@ const uploadReaction = multer({
 // AUTH
 // ═══════════════════════════════════════════════════════════════════════════════
 
-app.post('/api/auth/register', async (req, res) => {
+app.post('/api/auth/register', authLimiter, async (req, res) => {
   try {
     const { email, password, name } = req.body;
     if (!email || !password || !name)
@@ -301,7 +325,7 @@ app.post('/api/auth/register', async (req, res) => {
   }
 });
 
-app.post('/api/auth/login', async (req, res) => {
+app.post('/api/auth/login', authLimiter, async (req, res) => {
   try {
     const { email, password } = req.body;
     const user = await User.findOne({ email: (email || '').toLowerCase() });
@@ -355,7 +379,7 @@ app.get('/api/auth/verify-email', async (req, res) => {
   }
 });
 
-app.post('/api/auth/resend-verification', async (req, res) => {
+app.post('/api/auth/resend-verification', resendLimiter, async (req, res) => {
   try {
     const { email } = req.body;
     const user = await User.findOne({ email: (email || '').toLowerCase() });
@@ -517,20 +541,67 @@ app.post('/reaction/:id',
       const video = await Video.findById(req.params.id);
       if (!video) return res.status(404).json({ error: 'Vidéo introuvable' });
 
+      const viewerName = (req.body?.viewerName || 'Anonyme').slice(0, 80);
       const reaction = await Reaction.create({
         videoId:      video._id,
-        viewerName:   req.body?.viewerName || 'Anonyme',
+        viewerName,
         cloudinaryId: file.filename,
         url:          file.path
       });
 
       res.json({ reactionId: reaction._id, url: reaction.url });
+
+      // Notification email (non-bloquant)
+      if (resend) {
+        const owner = await User.findById(video.userId).catch(() => null);
+        if (owner?.email) {
+          const baseUrl = `${req.protocol}://${req.get('host')}`;
+          const videoTitle = video.originalName || 'ta vidéo';
+          resend.emails.send({
+            from:    'ReactionCam <noreply@reaction-cam.com>',
+            to:      owner.email,
+            subject: `${viewerName} a réagi à "${videoTitle.slice(0, 40)}"`,
+            html: `<!DOCTYPE html><html><body style="margin:0;padding:0;background:#0a0a0a;font-family:'Courier New',monospace;color:#e8e0d0;">
+<table width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:40px 20px;">
+<table width="480" cellpadding="0" cellspacing="0" style="background:#111;border:1px solid #1e1e1e;border-radius:4px;">
+  <tr><td style="padding:40px 36px;">
+    <p style="font-size:22px;font-weight:300;letter-spacing:0.12em;color:#c9a84c;margin:0 0 24px;">Reaction<em>Cam</em></p>
+    <p style="font-size:14px;margin:0 0 12px;">Nouvelle réaction !</p>
+    <p style="font-size:13px;color:#a09080;margin:0 0 28px;line-height:1.6;"><strong style="color:#e8e0d0;">${viewerName}</strong> a regardé <em>${videoTitle.slice(0, 60)}</em> et a enregistré sa réaction.</p>
+    <a href="${baseUrl}/dashboard" style="display:inline-block;padding:14px 28px;background:#c9a84c;color:#0a0a0a;text-decoration:none;font-size:11px;letter-spacing:0.18em;text-transform:uppercase;border-radius:2px;">Voir la réaction</a>
+    <p style="font-size:11px;color:#5a5245;margin:28px 0 0;line-height:1.6;">Tu reçois cet email car tu as un compte ReactionCam. <a href="${baseUrl}/dashboard" style="color:#7a6330;">Gérer les notifications</a></p>
+  </td></tr>
+</table>
+</td></tr></table></body></html>`,
+          }).catch(e => console.error('[NOTIF EMAIL]', e.message));
+        }
+      }
     } catch (e) {
       console.error('[REACTION]', e.message);
       res.status(500).json({ error: 'Erreur serveur' });
     }
   }
 );
+
+app.delete('/api/video/:id', requireAuth, async (req, res) => {
+  try {
+    const video = await Video.findOne({ _id: req.params.id, userId: req.session.userId });
+    if (!video) return res.status(404).json({ error: 'Vidéo introuvable' });
+
+    const reactions = await Reaction.find({ videoId: video._id });
+    for (const r of reactions) {
+      await cloudinary.uploader.destroy(r.cloudinaryId, { resource_type: 'video' }).catch(() => {});
+    }
+    await Reaction.deleteMany({ videoId: video._id });
+    await cloudinary.uploader.destroy(video.cloudinaryId, { resource_type: 'video' }).catch(() => {});
+    await Video.deleteOne({ _id: video._id });
+
+    res.json({ ok: true });
+  } catch (e) {
+    console.error('[DELETE VIDEO]', e.message);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // STRIPE BILLING

@@ -66,6 +66,8 @@
       'cookie.link':   'Politique de confidentialité',
       'cookie.accept': "J'ai compris",
       'footer.privacy': 'Politique de confidentialité',
+      'dashboard.delete':         'Supprimer',
+      'dashboard.delete.confirm': 'Supprimer cette vidéo et toutes ses réactions ? Cette action est irréversible.',
 
       'dashboard.title':                'Mes',
       'dashboard.title.em':             'vidéos',
@@ -189,6 +191,8 @@
       'cookie.link':   'Privacy policy',
       'cookie.accept': 'Got it',
       'footer.privacy': 'Privacy policy',
+      'dashboard.delete':         'Delete',
+      'dashboard.delete.confirm': 'Delete this video and all its reactions? This action cannot be undone.',
 
       'dashboard.title':                'My',
       'dashboard.title.em':             'videos',
@@ -306,6 +310,8 @@
       'cookie.link':   'Política de privacidad',
       'cookie.accept': 'Entendido',
       'footer.privacy': 'Política de privacidad',
+      'dashboard.delete':         'Eliminar',
+      'dashboard.delete.confirm': '¿Eliminar este vídeo y todas sus reacciones? Esta acción es irreversible.',
 
       'login.verify.title':       'Revisa tu correo',
       'login.verify.desc':        'Se envió un enlace de confirmación a',
