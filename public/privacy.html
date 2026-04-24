@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Politique de confidentialité — ReactionCam</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg: #0a0a0a; --surface: #111; --border: #1e1e1e;
+  --gold: #c9a84c; --gold-dim: #7a6330;
+  --text: #e8e0d0; --muted: #5a5245; --green: #4a7c59;
+}
+html, body { min-height: 100vh; background: var(--bg); color: var(--text); font-family: 'DM Mono', monospace; }
+
+header { position: sticky; top: 0; padding: 20px 40px; display: flex; align-items: center; justify-content: space-between; z-index: 10; background: rgba(10,10,10,0.95); border-bottom: 1px solid var(--border); }
+.logo { font-family: 'Cormorant Garamond', serif; font-size: 20px; font-weight: 300; letter-spacing: 0.12em; color: var(--gold); text-decoration: none; }
+.logo span { font-style: italic; }
+
+main { max-width: 760px; margin: 0 auto; padding: 60px 24px 80px; }
+
+h1 { font-family: 'Cormorant Garamond', serif; font-weight: 300; font-size: 32px; letter-spacing: 0.06em; color: var(--gold); margin-bottom: 8px; }
+.updated { font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); margin-bottom: 48px; }
+
+h2 { font-size: 11px; letter-spacing: 0.22em; text-transform: uppercase; color: var(--gold); margin: 40px 0 14px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+h3 { font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted); margin: 20px 0 8px; }
+p, li { font-size: 12px; line-height: 1.9; color: #a09080; letter-spacing: 0.02em; }
+ul, ol { padding-left: 18px; }
+li { margin-bottom: 4px; }
+a { color: var(--gold); text-decoration: none; }
+a:hover { text-decoration: underline; }
+strong { color: var(--text); font-weight: 400; }
+
+.highlight { background: var(--surface); border: 1px solid var(--border); border-radius: 2px; padding: 16px 20px; margin: 16px 0; }
+.highlight p { margin: 0; }
+
+table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 11px; }
+th { text-align: left; padding: 8px 12px; font-size: 9px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); border-bottom: 1px solid var(--border); }
+td { padding: 10px 12px; border-bottom: 1px solid #151515; color: #a09080; vertical-align: top; }
+td:first-child { color: var(--text); white-space: nowrap; }
+tr:last-child td { border-bottom: none; }
+
+footer { padding: 24px 40px; border-top: 1px solid var(--border); text-align: center; font-size: 10px; color: var(--muted); letter-spacing: 0.08em; }
+footer a { color: var(--gold); }
+
+@media (max-width: 600px) {
+  header { padding: 16px 20px; }
+  main { padding: 40px 16px 60px; }
+  table { display: block; overflow-x: auto; }
+}
+</style>
+</head>
+<body>
+
+<header>
+  <a class="logo" href="/">Reaction<span>Cam</span></a>
+  <div id="rc-controls-mount"></div>
+</header>
+
+<main>
+  <h1>Politique de confidentialité</h1>
+  <p class="updated">Dernière mise à jour : avril 2025 · Version 1.0</p>
+
+  <p>La présente politique décrit comment <strong>ReactionCam</strong> (ci-après « nous », « notre service ») collecte, utilise et protège les données personnelles des utilisateurs (ci-après « vous ») conformément au Règlement Général sur la Protection des Données (RGPD – UE 2016/679) et à la Directive ePrivacy 2002/58/CE.</p>
+
+  <!-- ── 1. Responsable ── -->
+  <h2>1. Responsable du traitement</h2>
+  <div class="highlight">
+    <p><strong>ReactionCam</strong><br>
+    Reaction Cam<br>
+    Aleea Magnoliei 2, 500382 Brașov<br>
+    Email : <a href="mailto:contact@reaction-cam.com">contact@reaction-cam.com</a><br>
+    Site : <a href="https://reaction-cam.com">reaction-cam.com</a></p>
+  </div>
+
+  <!-- ── 2. Données collectées ── -->
+  <h2>2. Données personnelles collectées</h2>
+
+  <h3>2.1 Utilisateurs inscrits</h3>
+  <ul>
+    <li><strong>Données de compte</strong> : adresse email, prénom/pseudonyme, mot de passe haché (bcrypt)</li>
+    <li><strong>Données OAuth</strong> : identifiant Google, adresse email issue de Google (si connexion via Google)</li>
+    <li><strong>Données de paiement</strong> : traitées directement par Stripe — nous ne stockons aucun numéro de carte. Nous conservons uniquement l'identifiant client Stripe et l'identifiant d'abonnement.</li>
+    <li><strong>Vidéos uploadées</strong> : fichiers vidéo, nom d'origine du fichier, taille</li>
+    <li><strong>Métadonnées techniques</strong> : date de création des comptes et vidéos, plan d'abonnement</li>
+  </ul>
+
+  <h3>2.2 Spectateurs (personnes recevant un lien de réaction)</h3>
+  <ul>
+    <li><strong>Prénom/pseudonyme</strong> : facultatif, saisi avant l'enregistrement</li>
+    <li><strong>Vidéo de réaction</strong> : enregistrement webcam/micro, stocké après consentement explicite</li>
+    <li><strong>Adresse IP</strong> : enregistrée dans les journaux serveur (logs techniques)</li>
+  </ul>
+
+  <h3>2.3 Données techniques (tous les visiteurs)</h3>
+  <ul>
+    <li>Adresse IP, navigateur, système d'exploitation (journaux d'accès serveur)</li>
+    <li>Cookie de session (identifiant de connexion, voir section 7)</li>
+  </ul>
+
+  <!-- ── 3. Finalités et bases légales ── -->
+  <h2>3. Finalités et bases légales</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Finalité</th>
+        <th>Données concernées</th>
+        <th>Base légale (Art. 6 RGPD)</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Création et gestion du compte</td>
+        <td>Email, nom, mot de passe</td>
+        <td>Art. 6(1)(b) — exécution du contrat</td>
+      </tr>
+      <tr>
+        <td>Fourniture du service (upload, partage, réaction)</td>
+        <td>Vidéos, métadonnées</td>
+        <td>Art. 6(1)(b) — exécution du contrat</td>
+      </tr>
+      <tr>
+        <td>Enregistrement de la réaction du spectateur</td>
+        <td>Vidéo de réaction, prénom</td>
+        <td>Art. 6(1)(a) — consentement explicite (recueilli avant l'enregistrement)</td>
+      </tr>
+      <tr>
+        <td>Gestion des paiements et abonnements</td>
+        <td>Email, ID Stripe</td>
+        <td>Art. 6(1)(b) — contrat ; Art. 6(1)(c) — obligation légale</td>
+      </tr>
+      <tr>
+        <td>Envoi de l'email de vérification d'adresse</td>
+        <td>Email</td>
+        <td>Art. 6(1)(b) — exécution du contrat</td>
+      </tr>
+      <tr>
+        <td>Sécurité, prévention des abus, journaux techniques</td>
+        <td>Adresse IP, logs</td>
+        <td>Art. 6(1)(f) — intérêt légitime</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- ── 4. Durée de conservation ── -->
+  <h2>4. Durée de conservation</h2>
+  <table>
+    <thead>
+      <tr><th>Donnée</th><th>Durée</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Données de compte</td>
+        <td>Jusqu'à suppression du compte ou 3 ans d'inactivité</td>
+      </tr>
+      <tr>
+        <td>Vidéos — plan Gratuit</td>
+        <td>90 jours à compter de l'upload, puis suppression automatique</td>
+      </tr>
+      <tr>
+        <td>Vidéos — plan Pro</td>
+        <td>Conservation jusqu'à la résiliation de l'abonnement, puis basculement en règle plan Gratuit (90 jours)</td>
+      </tr>
+      <tr>
+        <td>Vidéos de réaction</td>
+        <td>Supprimées en même temps que la vidéo d'origine</td>
+      </tr>
+      <tr>
+        <td>Sessions de connexion</td>
+        <td>7 jours (expiration automatique du cookie)</td>
+      </tr>
+      <tr>
+        <td>Journaux serveur (logs)</td>
+        <td>12 mois maximum</td>
+      </tr>
+      <tr>
+        <td>Tokens de vérification email</td>
+        <td>24 heures (expiration automatique)</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- ── 5. Sous-traitants ── -->
+  <h2>5. Destinataires et sous-traitants</h2>
+  <p>Vos données sont traitées par les prestataires techniques suivants, agissant en qualité de sous-traitants :</p>
+  <table>
+    <thead>
+      <tr><th>Prestataire</th><th>Rôle</th><th>Localisation</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Cloudinary Ltd</td>
+        <td>Hébergement et traitement des fichiers vidéo</td>
+        <td>États-Unis (Santa Clara, CA)</td>
+      </tr>
+      <tr>
+        <td>MongoDB, Inc.</td>
+        <td>Base de données (comptes, métadonnées)</td>
+        <td>États-Unis / Union européenne selon configuration</td>
+      </tr>
+      <tr>
+        <td>Stripe, Inc.</td>
+        <td>Traitement des paiements et abonnements</td>
+        <td>États-Unis (San Francisco, CA)</td>
+      </tr>
+      <tr>
+        <td>Google Ireland Ltd / Google LLC</td>
+        <td>Connexion OAuth (optionnelle) ; polices web (Google Fonts)</td>
+        <td>Irlande / États-Unis</td>
+      </tr>
+      <tr>
+        <td>Resend, Inc.</td>
+        <td>Envoi d'emails transactionnels (vérification d'adresse)</td>
+        <td>États-Unis</td>
+      </tr>
+      <tr>
+        <td>Render Services, Inc.</td>
+        <td>Hébergement de l'application</td>
+        <td>États-Unis</td>
+      </tr>
+    </tbody>
+  </table>
+  <p>Ces prestataires n'utilisent vos données qu'aux fins de fournir leurs services à ReactionCam et sont contractuellement tenus de respecter le RGPD.</p>
+
+  <!-- ── 6. Transferts hors UE ── -->
+  <h2>6. Transferts en dehors de l'Union européenne</h2>
+  <p>Certains sous-traitants listés ci-dessus sont établis aux États-Unis. Ces transferts sont encadrés par les <strong>Clauses Contractuelles Types (CCT)</strong> adoptées par la Commission européenne (décision 2021/914), qui offrent des garanties appropriées conformément à l'Art. 46 RGPD. Vous pouvez obtenir une copie de ces garanties en nous contactant.</p>
+  <p>Concernant <strong>Google Fonts</strong> : lors du chargement des pages, votre navigateur effectue une requête vers les serveurs de Google pour récupérer les polices de caractères. Cette requête transmet votre adresse IP à Google. Nous envisageons d'auto-héberger ces polices dans une prochaine version afin d'éliminer ce transfert.</p>
+
+  <!-- ── 7. Cookies ── -->
+  <h2>7. Cookies et stockage local</h2>
+  <p>Ce site utilise un nombre minimal de cookies et d'éléments de stockage, tous exemptés de consentement conformément à l'Art. 5(3) de la Directive ePrivacy et aux lignes directrices de la CNIL :</p>
+  <table>
+    <thead>
+      <tr><th>Identifiant</th><th>Type</th><th>Finalité</th><th>Durée</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>connect.sid</td>
+        <td>Cookie HTTP</td>
+        <td>Maintien de la session de connexion — <em>strictement nécessaire</em></td>
+        <td>7 jours</td>
+      </tr>
+      <tr>
+        <td>rc-theme</td>
+        <td>localStorage</td>
+        <td>Mémorisation de la préférence d'affichage (clair/sombre) — <em>préférence UI</em></td>
+        <td>Indéfinie (supprimable depuis les paramètres du navigateur)</td>
+      </tr>
+      <tr>
+        <td>rc-lang</td>
+        <td>localStorage</td>
+        <td>Mémorisation de la langue choisie — <em>préférence UI</em></td>
+        <td>Indéfinie</td>
+      </tr>
+      <tr>
+        <td>rc-consent</td>
+        <td>localStorage</td>
+        <td>Enregistrement de la prise de connaissance du bandeau d'information</td>
+        <td>Indéfinie</td>
+      </tr>
+    </tbody>
+  </table>
+  <p><strong>Aucun cookie publicitaire, de profilage ou de suivi tiers</strong> n'est utilisé. Vous pouvez à tout moment supprimer ces données via les paramètres de votre navigateur (<em>Paramètres › Confidentialité › Vider le cache / Gérer les données de site</em>).</p>
+
+  <!-- ── 8. Droits ── -->
+  <h2>8. Vos droits</h2>
+  <p>Conformément aux Articles 15 à 22 du RGPD, vous disposez des droits suivants :</p>
+  <ul>
+    <li><strong>Droit d'accès</strong> (Art. 15) — obtenir une copie des données vous concernant</li>
+    <li><strong>Droit de rectification</strong> (Art. 16) — corriger des données inexactes ou incomplètes</li>
+    <li><strong>Droit à l'effacement</strong> (Art. 17) — demander la suppression de vos données («&nbsp;droit à l'oubli&nbsp;»)</li>
+    <li><strong>Droit à la limitation</strong> (Art. 18) — restreindre temporairement un traitement</li>
+    <li><strong>Droit à la portabilité</strong> (Art. 20) — recevoir vos données dans un format structuré et lisible</li>
+    <li><strong>Droit d'opposition</strong> (Art. 21) — vous opposer à un traitement fondé sur l'intérêt légitime</li>
+    <li><strong>Droit de retrait du consentement</strong> — retirer à tout moment un consentement préalablement donné (sans affecter la licéité du traitement antérieur)</li>
+  </ul>
+  <p>Pour exercer ces droits, contactez-nous à <a href="mailto:contact@reaction-cam.com">contact@reaction-cam.com</a>. Nous répondrons dans un délai d'un mois (Art. 12 RGPD). En cas de réponse insatisfaisante, vous pouvez introduire une réclamation auprès de la <strong>CNIL</strong> (<a href="https://www.cnil.fr" target="_blank" rel="noopener">cnil.fr</a>) ou de l'autorité de contrôle de votre pays de résidence.</p>
+
+  <!-- ── 9. Mineurs ── -->
+  <h2>9. Protection des mineurs</h2>
+  <p>Ce service est destiné aux personnes âgées d'au moins 15 ans (ou l'âge du consentement numérique applicable dans votre pays de résidence). Si vous êtes mineur, l'accord d'un parent ou tuteur légal est requis. Nous ne collectons pas sciemment de données de personnes en dessous de cet âge.</p>
+
+  <!-- ── 10. Sécurité ── -->
+  <h2>10. Sécurité des données</h2>
+  <p>Nous mettons en œuvre des mesures techniques et organisationnelles adaptées pour protéger vos données : chiffrement HTTPS, hachage des mots de passe (bcrypt, facteur de coût 10), cookies de session HTTP-only et Secure en production, accès aux bases de données restreint par authentification. En cas de violation de données susceptible d'affecter vos droits, nous vous en informerons conformément à l'Art. 34 RGPD.</p>
+
+  <!-- ── 11. Contact et modifications ── -->
+  <h2>11. Contact et modifications</h2>
+  <p>Pour toute question relative à cette politique ou à vos données personnelles : <a href="mailto:contact@reaction-cam.com">contact@reaction-cam.com</a></p>
+  <p>Nous nous réservons le droit de modifier cette politique à tout moment. En cas de modification substantielle, vous serez informé par email (si vous êtes inscrit) ou par une notice visible sur le site. La date de mise à jour en haut de page indique la version en vigueur.</p>
+  <p>La présente politique est rédigée en français, langue faisant foi. Des traductions à titre indicatif peuvent être disponibles.</p>
+</main>
+
+<footer>
+  <span>© ReactionCam — <a href="/">Accueil</a></span>
+</footer>
+
+<script src="/ui.js"></script>
+</body>
+</html>
