@@ -18,7 +18,6 @@ body::before {
   background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.05'/%3E%3C/svg%3E");
 }
 
-/* ── Layout ── */
 .app { position: relative; z-index: 1; min-height: 100vh; display: flex; flex-direction: column; }
 
 nav {
@@ -29,27 +28,43 @@ nav {
 }
 .logo { font-family: 'Cormorant Garamond', serif; font-size: 20px; font-weight: 300; letter-spacing: 0.12em; color: var(--gold); text-decoration: none; }
 .logo span { font-style: italic; }
-.nav-right { display: flex; align-items: center; gap: 20px; }
+.nav-right { display: flex; align-items: center; gap: 12px; }
 .user-name { font-size: 12px; color: var(--muted); letter-spacing: 0.06em; }
 .btn-logout { background: none; border: 1px solid var(--border); border-radius: 2px; padding: 8px 16px; color: var(--muted); font-family: 'DM Mono', monospace; font-size: 11px; letter-spacing: 0.1em; cursor: pointer; transition: color 0.2s, border-color 0.2s; }
 .btn-logout:hover { color: var(--text); border-color: var(--muted); }
+.plan-badge { display: inline-block; padding: 3px 8px; border-radius: 2px; font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; }
+.plan-badge.free { border: 1px solid var(--border); color: var(--muted); }
+.plan-badge.pro  { border: 1px solid var(--gold-dim); color: var(--gold); background: rgba(201,168,76,0.06); }
+.plan-badge.admin { border: 1px solid var(--gold-dim); color: var(--gold); background: rgba(201,168,76,0.06); }
 
 main { flex: 1; padding: 48px; max-width: 1200px; width: 100%; margin: 0 auto; }
 
-/* ── Top bar ── */
-.topbar { display: flex; align-items: flex-end; justify-content: space-between; margin-bottom: 40px; flex-wrap: wrap; gap: 16px; }
+.plan-bar { display: flex; align-items: center; gap: 16px; padding: 14px 20px; border: 1px solid var(--border); border-radius: 3px; background: var(--surface); margin-bottom: 24px; flex-wrap: wrap; }
+.plan-bar-info { flex: 1; font-size: 12px; color: var(--muted); }
+.plan-bar-info strong { color: var(--text); }
+.plan-bar-quota { font-size: 11px; color: var(--muted); letter-spacing: 0.06em; }
+.plan-bar-quota .used { color: var(--gold); }
+.btn-upgrade { display: inline-flex; align-items: center; gap: 6px; background: var(--gold); color: #0a0a0a; border: none; border-radius: 2px; padding: 8px 16px; font-family: 'DM Mono', monospace; font-size: 10px; letter-spacing: 0.15em; text-transform: uppercase; cursor: pointer; transition: background 0.2s; text-decoration: none; white-space: nowrap; }
+.btn-upgrade:hover { background: #e0bb60; }
+.btn-manage { display: inline-flex; align-items: center; gap: 6px; background: none; color: var(--muted); border: 1px solid var(--border); border-radius: 2px; padding: 8px 16px; font-family: 'DM Mono', monospace; font-size: 10px; letter-spacing: 0.15em; text-transform: uppercase; cursor: pointer; transition: all 0.2s; }
+.btn-manage:hover { color: var(--text); border-color: var(--muted); }
+.video-expiry { font-size: 10px; color: var(--muted); letter-spacing: 0.06em; margin-top: 4px; }
+.video-expiry.soon { color: #e67e22; }
+
+.toast { position: fixed; bottom: 32px; left: 50%; transform: translateX(-50%); background: var(--green); color: #fff; padding: 12px 24px; border-radius: 3px; font-size: 12px; letter-spacing: 0.08em; z-index: 300; animation: toastIn 0.3s ease; pointer-events: none; }
+@keyframes toastIn { from { opacity: 0; transform: translateX(-50%) translateY(12px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }
+
+.topbar { display: flex; align-items: flex-end; justify-content: space-between; margin-bottom: 16px; flex-wrap: wrap; gap: 16px; }
 .page-title { font-family: 'Cormorant Garamond', serif; font-size: 42px; font-weight: 300; line-height: 1; }
 .page-title em { font-style: italic; color: var(--gold); }
 .btn-upload { display: inline-flex; align-items: center; gap: 8px; background: var(--gold); color: #0a0a0a; border: none; border-radius: 2px; padding: 12px 22px; font-family: 'DM Mono', monospace; font-size: 11px; letter-spacing: 0.15em; text-transform: uppercase; cursor: pointer; transition: background 0.2s; text-decoration: none; }
 .btn-upload:hover { background: #e0bb60; }
 
-/* ── Empty state ── */
 .empty { text-align: center; padding: 80px 40px; border: 1px dashed var(--border); border-radius: 4px; }
 .empty-icon { width: 48px; height: 48px; margin: 0 auto 20px; opacity: 0.2; }
 .empty h3 { font-family: 'Cormorant Garamond', serif; font-size: 26px; font-weight: 300; margin-bottom: 8px; }
 .empty p { font-size: 12px; color: var(--muted); }
 
-/* ── Video cards ── */
 .videos-grid { display: flex; flex-direction: column; gap: 24px; }
 
 .video-card { background: var(--surface); border: 1px solid var(--border); border-radius: 4px; overflow: hidden; }
@@ -72,7 +87,6 @@ main { flex: 1; padding: 48px; max-width: 1200px; width: 100%; margin: 0 auto; }
 .chevron { transition: transform 0.3s; opacity: 0.4; flex-shrink: 0; }
 .video-card.open .chevron { transform: rotate(180deg); }
 
-/* ── Reactions list ── */
 .reactions-section { border-top: 1px solid var(--border); }
 .reactions-header { padding: 14px 24px; font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--muted); background: #0d0d0d; }
 .reactions-list { padding: 0; }
@@ -92,11 +106,9 @@ main { flex: 1; padding: 48px; max-width: 1200px; width: 100%; margin: 0 auto; }
 .reaction-dl { display: flex; align-items: center; gap: 6px; background: none; border: 1px solid var(--border); border-radius: 2px; padding: 7px 12px; color: var(--muted); font-family: 'DM Mono', monospace; font-size: 10px; letter-spacing: 0.1em; cursor: pointer; transition: all 0.2s; text-decoration: none; flex-shrink: 0; }
 .reaction-dl:hover { color: var(--text); border-color: var(--muted); }
 
-/* ── Spinner ── */
 .spinner { width: 32px; height: 32px; border: 2px solid var(--border); border-top-color: var(--gold); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 80px auto; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
-/* ── Modal vidéo ── */
 .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.92); z-index: 200; align-items: center; justify-content: center; padding: 20px; }
 .modal-overlay.open { display: flex; }
 .modal-content { max-width: 800px; width: 100%; position: relative; }
@@ -122,24 +134,27 @@ main { flex: 1; padding: 48px; max-width: 1200px; width: 100%; margin: 0 auto; }
   <nav>
     <a class="logo" href="/">Reaction<span>Cam</span></a>
     <div class="nav-right">
+      <div id="rc-controls-mount"></div>
       <span class="user-name" id="userName">…</span>
-      <button class="btn-logout" id="btnLogout">Déconnexion</button>
+      <span class="plan-badge free" id="planBadge">…</span>
+      <button class="btn-logout" id="btnLogout" data-i18n="nav.logout">Déconnexion</button>
     </div>
   </nav>
 
   <main>
     <div class="topbar">
       <div>
-        <div class="page-title">Mes <em>vidéos</em></div>
+        <div class="page-title"><span data-i18n="dashboard.title">Mes</span> <em data-i18n="dashboard.title.em">vidéos</em></div>
       </div>
       <a href="/" class="btn-upload">
         <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5">
           <path d="M6 1v7M2 5l4-4 4 4"/><path d="M1 10h10"/>
         </svg>
-        Uploader une vidéo
+        <span data-i18n="nav.upload">Uploader une vidéo</span>
       </a>
     </div>
 
+    <div id="planInfo" style="display:none;" class="plan-bar"></div>
     <div id="content"><div class="spinner"></div></div>
   </main>
 </div>
@@ -147,19 +162,33 @@ main { flex: 1; padding: 48px; max-width: 1200px; width: 100%; margin: 0 auto; }
 <!-- Modal -->
 <div class="modal-overlay" id="modal">
   <div class="modal-content">
-    <button class="modal-close" id="modalClose">✕ fermer</button>
+    <button class="modal-close" id="modalClose" data-i18n="dashboard.modal.close">✕ fermer</button>
     <video class="modal-video" id="modalVideo" controls playsinline></video>
   </div>
 </div>
 
+<script src="/ui.js"></script>
 <script>
-// ── Auth check ────────────────────────────────────────────────────────────────
+const DATE_LOCALES = { fr: 'fr-FR', en: 'en-US', es: 'es-ES' };
+
 let me = null;
+let _dashData = null;
+
 async function init() {
   const r = await fetch('/api/auth/me');
   if (!r.ok) { location.href = '/login'; return; }
   me = await r.json();
   document.getElementById('userName').textContent = me.name;
+
+  const badge = document.getElementById('planBadge');
+  badge.textContent = me.planLabel;
+  badge.className   = `plan-badge ${me.plan}`;
+
+  if (new URLSearchParams(location.search).get('upgrade') === 'success') {
+    showToast(window.__('dashboard.toast.pro'));
+    history.replaceState(null, '', '/dashboard');
+  }
+
   loadDashboard();
 }
 
@@ -168,15 +197,58 @@ document.getElementById('btnLogout').addEventListener('click', async () => {
   location.href = '/login';
 });
 
-// ── Dashboard data ─────────────────────────────────────────────────────────────
 async function loadDashboard() {
-  const r = await fetch('/api/dashboard');
-  const { videos } = await r.json();
-  renderDashboard(videos);
+  const r    = await fetch('/api/dashboard');
+  _dashData  = await r.json();
+  renderPlanBar(_dashData);
+  renderDashboard(_dashData.videos);
+}
+
+function renderPlanBar({ plan, planLabel, maxVideos, videoCount }) {
+  const el = document.getElementById('planInfo');
+  el.style.display = 'flex';
+
+  if (plan === 'pro' || plan === 'admin') {
+    el.innerHTML = `
+      <div class="plan-bar-info">Plan <strong>${planLabel}</strong> — ${window.__('dashboard.plan.unlimited')}</div>
+      <button class="btn-manage" id="btnPortal">${window.__('dashboard.plan.manage')}</button>`;
+    document.getElementById('btnPortal').addEventListener('click', openPortal);
+  } else {
+    el.innerHTML = `
+      <div class="plan-bar-info">
+        Plan <strong>${planLabel}</strong>
+        <span class="plan-bar-quota"> · <span class="used">${videoCount}</span> / ${maxVideos} vidéos${window.__('dashboard.plan.quota')}</span>
+      </div>
+      <a href="/pricing" class="btn-upgrade">${window.__('dashboard.plan.upgrade')}</a>`;
+  }
+}
+
+async function openPortal() {
+  const btn = document.getElementById('btnPortal');
+  btn.textContent = window.__('dashboard.portal.loading');
+  const r = await fetch('/api/billing/portal', { method: 'POST' });
+  const { url, error } = await r.json();
+  if (error) { btn.textContent = window.__('dashboard.plan.manage'); alert(error); return; }
+  location.href = url;
+}
+
+function showToast(msg) {
+  const t = document.createElement('div');
+  t.className = 'toast';
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 3500);
 }
 
 function formatDate(ts) {
-  return new Date(ts).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+  const locale = DATE_LOCALES[window.RC_LANG] || 'fr-FR';
+  return new Date(ts).toLocaleDateString(locale, { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+}
+
+function rxHeader(count) {
+  if (count === 0) return window.__('dashboard.rx.none');
+  const plural = count > 1;
+  return `${count} ${window.__(plural ? 'dashboard.rx.plural' : 'dashboard.rx.singular')} ${window.__(plural ? 'dashboard.rx.received.plural' : 'dashboard.rx.received.singular')}`;
 }
 
 function renderDashboard(videos) {
@@ -188,31 +260,31 @@ function renderDashboard(videos) {
           <rect x="4" y="8" width="40" height="32" rx="3"/>
           <polygon points="18,16 34,24 18,32"/>
         </svg>
-        <h3>Aucune vidéo pour l'instant</h3>
-        <p style="margin-top:8px;">Upload ta première vidéo pour générer un lien de réaction.</p>
+        <h3>${window.__('dashboard.empty.title')}</h3>
+        <p style="margin-top:8px;">${window.__('dashboard.empty.desc')}</p>
       </div>`;
     return;
   }
 
   el.innerHTML = `<div class="videos-grid">${videos.map(renderVideoCard).join('')}</div>`;
 
-  // Events
   videos.forEach(v => {
-    // Toggle réactions
     document.getElementById(`header-${v.id}`).addEventListener('click', () => {
       document.getElementById(`card-${v.id}`).classList.toggle('open');
     });
-    // Copier lien
     document.getElementById(`copy-${v.id}`).addEventListener('click', e => {
       e.stopPropagation();
       const link = `${location.origin}/watch/${v.id}`;
       navigator.clipboard.writeText(link).then(() => {
         const btn = document.getElementById(`copy-${v.id}`);
-        btn.textContent = '✓ Copié'; btn.classList.add('copied');
-        setTimeout(() => { btn.textContent = 'Copier le lien'; btn.classList.remove('copied'); }, 2000);
+        btn.textContent = window.__('dashboard.copy.done');
+        btn.classList.add('copied');
+        setTimeout(() => {
+          btn.textContent = window.__('dashboard.copy.link');
+          btn.classList.remove('copied');
+        }, 2000);
       });
     });
-    // Réactions : play + download
     v.reactions.forEach(rx => {
       const thumb = document.getElementById(`rxthumb-${rx.id}`);
       if (thumb) thumb.addEventListener('click', () => openModal(rx.url));
@@ -229,6 +301,7 @@ function renderDashboard(videos) {
 
 function renderVideoCard(v) {
   const shareLink = `${location.origin}/watch/${v.id}`;
+  const count = v.reactions.length;
   return `
   <div class="video-card" id="card-${v.id}">
     <div class="video-header" id="header-${v.id}">
@@ -236,14 +309,15 @@ function renderVideoCard(v) {
         <video src="${v.url}" muted preload="metadata" crossorigin="anonymous"></video>
       </div>
       <div class="video-meta">
-        <div class="video-name">${v.originalName || '(sans nom)'}</div>
+        <div class="video-name">${v.originalName || window.__('dashboard.no-name')}</div>
         <div class="video-date">${formatDate(v.createdAt)}</div>
         <div class="video-stats">
-          <span class="stat"><span class="stat-val">${v.reactions.length}</span><span class="stat-lbl">réaction${v.reactions.length !== 1 ? 's' : ''}</span></span>
+          <span class="stat"><span class="stat-val">${count}</span><span class="stat-lbl">${window.__(count !== 1 ? 'dashboard.rx.plural' : 'dashboard.rx.singular')}</span></span>
         </div>
+        ${renderExpiry(v.expiresAt)}
       </div>
       <div class="video-actions">
-        <button class="btn-copy" id="copy-${v.id}">Copier le lien</button>
+        <button class="btn-copy" id="copy-${v.id}">${window.__('dashboard.copy.link')}</button>
         <svg class="chevron" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
           <path d="M4 6l4 4 4-4"/>
         </svg>
@@ -251,12 +325,10 @@ function renderVideoCard(v) {
     </div>
 
     <div class="reactions-section">
-      <div class="reactions-header">
-        ${v.reactions.length === 0 ? 'Aucune réaction reçue' : `${v.reactions.length} réaction${v.reactions.length > 1 ? 's' : ''} reçue${v.reactions.length > 1 ? 's' : ''}`}
-      </div>
-      ${v.reactions.length === 0 ? `
+      <div class="reactions-header">${rxHeader(count)}</div>
+      ${count === 0 ? `
         <div style="padding:20px 24px;font-size:12px;color:var(--muted);">
-          Partage ce lien pour recevoir des réactions : 
+          ${window.__('dashboard.rx.share')}
           <span style="color:var(--gold);font-size:11px;">${shareLink}</span>
         </div>
       ` : `
@@ -266,6 +338,18 @@ function renderVideoCard(v) {
       `}
     </div>
   </div>`;
+}
+
+function renderExpiry(expiresAt) {
+  if (!expiresAt) return '';
+  const d    = new Date(expiresAt);
+  const days = Math.ceil((d - Date.now()) / 86400000);
+  const soon = days <= 14;
+  const locale = DATE_LOCALES[window.RC_LANG] || 'fr-FR';
+  const txt = soon
+    ? `${window.__('dashboard.expire.in')} ${days} ${window.__(days > 1 ? 'dashboard.expire.days' : 'dashboard.expire.day')}`
+    : `${window.__('dashboard.expire.on')} ${d.toLocaleDateString(locale, { day: '2-digit', month: 'short', year: 'numeric' })}`;
+  return `<div class="video-expiry${soon ? ' soon' : ''}">${txt}</div>`;
 }
 
 function renderReactionRow(rx) {
@@ -289,20 +373,29 @@ function renderReactionRow(rx) {
       `}
     </div>
     <div class="reaction-meta">
-      <div class="reaction-viewer">${rx.viewerName || 'Anonyme'}</div>
+      <div class="reaction-viewer">${rx.viewerName || window.__('dashboard.anonymous')}</div>
       <div class="reaction-date">${formatDate(rx.createdAt)}</div>
       <div class="reaction-status ${rx.ready ? 'status-ready' : 'status-processing'}">
-        ${rx.ready ? '● Vidéo prête' : '◌ Conversion en cours…'}
+        ${rx.ready ? window.__('dashboard.status.ready') : window.__('dashboard.status.proc')}
       </div>
     </div>
     ${url ? `<button class="reaction-dl" id="rxdl-${rx.id}">
       <svg width="11" height="11" viewBox="0 0 11 11" fill="none" stroke="currentColor" stroke-width="1.4">
         <path d="M5.5 1v6M3 5l2.5 2.5L8 5"/><path d="M1 9.5h9"/>
       </svg>
-      <span>Télécharger</span>
+      <span>${window.__('download')}</span>
     </button>` : ''}
   </div>`;
 }
+
+// Re-render on language change
+document.addEventListener('rc-langchange', () => {
+  if (_dashData) {
+    renderPlanBar(_dashData);
+    renderDashboard(_dashData.videos);
+  }
+  document.getElementById('modalClose').textContent = window.__('dashboard.modal.close');
+});
 
 // ── Modal ─────────────────────────────────────────────────────────────────────
 function openModal(url) {

@@ -58,6 +58,21 @@ header { position: fixed; top: 0; left: 0; right: 0; padding: 24px 40px; display
 
 .divider { text-align: center; font-size: 11px; color: var(--muted); letter-spacing: 0.08em; margin: 24px 0 0; }
 
+.btn-google {
+  width: 100%; padding: 12px 14px; margin-bottom: 20px;
+  background: #fff; color: #3c4043; border: 1px solid #dadce0; border-radius: 2px;
+  font-family: 'DM Mono', monospace; font-size: 12px; letter-spacing: 0.06em;
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  gap: 10px; transition: background 0.15s; text-decoration: none;
+}
+.btn-google:hover { background: #f1f3f4; }
+
+.or-sep { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+.or-sep::before, .or-sep::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+.or-sep span { font-size: 10px; color: var(--muted); letter-spacing: 0.14em; text-transform: uppercase; white-space: nowrap; }
+
+.global-error { background: rgba(192,57,43,0.1); border: 1px solid rgba(192,57,43,0.3); border-radius: 2px; padding: 10px 14px; font-size: 12px; color: #e07060; margin: 0 32px 0; letter-spacing: 0.04em; }
+
 @keyframes fadeUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
 .card { animation: fadeUp 0.5s ease both; }
 </style>
@@ -65,66 +80,98 @@ header { position: fixed; top: 0; left: 0; right: 0; padding: 24px 40px; display
 <body>
 <header>
   <a class="logo" href="/">Reaction<span>Cam</span></a>
+  <div id="rc-controls-mount"></div>
 </header>
 
 <div class="page">
   <div class="card">
     <div class="tabs">
-      <button class="tab active" id="tabLogin">Connexion</button>
-      <button class="tab" id="tabRegister">Créer un compte</button>
+      <button class="tab active" id="tabLogin" data-i18n="login.tab.login">Connexion</button>
+      <button class="tab" id="tabRegister" data-i18n="login.tab.register">Créer un compte</button>
     </div>
+
+    <div id="globalError" style="display:none;padding:12px 32px 0;"></div>
 
     <!-- LOGIN -->
     <div class="panel active" id="panelLogin">
       <div class="form-body">
+        <a href="/auth/google" class="btn-google" id="btnGoogleLogin">
+          <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+          <span data-i18n="login.google">Continuer avec Google</span>
+        </a>
+        <div class="or-sep"><span data-i18n="login.or.email">ou continuer avec email</span></div>
         <div class="error" id="loginError"></div>
         <div class="field">
-          <label>Email</label>
-          <input type="email" id="loginEmail" placeholder="toi@exemple.com" autocomplete="email">
+          <label data-i18n="login.label.email">Email</label>
+          <input type="email" id="loginEmail" placeholder="toi@exemple.com" autocomplete="email" data-i18n-placeholder="login.email.placeholder">
         </div>
         <div class="field">
-          <label>Mot de passe</label>
+          <label data-i18n="login.label.password">Mot de passe</label>
           <input type="password" id="loginPassword" placeholder="••••••••" autocomplete="current-password">
         </div>
-        <button class="btn-submit" id="btnLogin">Se connecter</button>
-        <p class="divider">Pas encore de compte ? <a href="#" id="goRegister" style="color:var(--gold);text-decoration:none;">Créer un compte</a></p>
+        <button class="btn-submit" id="btnLogin" data-i18n="login.btn.login">Se connecter</button>
+        <p class="divider"><span data-i18n="login.link.no-account">Pas encore de compte ?</span> <a href="#" id="goRegister" style="color:var(--gold);text-decoration:none;" data-i18n="login.link.register">Créer un compte</a></p>
       </div>
     </div>
 
     <!-- REGISTER -->
     <div class="panel" id="panelRegister">
       <div class="form-body">
+        <a href="/auth/google" class="btn-google" id="btnGoogleRegister">
+          <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+          <span data-i18n="login.google">Continuer avec Google</span>
+        </a>
+        <div class="or-sep"><span data-i18n="login.or.create">ou créer avec email</span></div>
         <div class="error" id="registerError"></div>
         <div class="field">
-          <label>Ton prénom / pseudo</label>
+          <label data-i18n="login.label.name">Ton prénom / pseudo</label>
           <input type="text" id="registerName" placeholder="Alex" autocomplete="name">
         </div>
         <div class="field">
-          <label>Email</label>
-          <input type="email" id="registerEmail" placeholder="toi@exemple.com" autocomplete="email">
+          <label data-i18n="login.label.email">Email</label>
+          <input type="email" id="registerEmail" placeholder="toi@exemple.com" autocomplete="email" data-i18n-placeholder="login.email.placeholder">
         </div>
         <div class="field">
-          <label>Mot de passe</label>
-          <input type="password" id="registerPassword" placeholder="6 caractères minimum" autocomplete="new-password">
+          <label data-i18n="login.label.password">Mot de passe</label>
+          <input type="password" id="registerPassword" placeholder="6 caractères minimum" autocomplete="new-password" data-i18n-placeholder="login.pw.placeholder">
         </div>
-        <button class="btn-submit" id="btnRegister">Créer mon compte</button>
-        <p class="divider">Déjà un compte ? <a href="#" id="goLogin" style="color:var(--gold);text-decoration:none;">Se connecter</a></p>
+        <button class="btn-submit" id="btnRegister" data-i18n="login.btn.register">Créer mon compte</button>
+        <p class="divider"><span data-i18n="login.link.has-account">Déjà un compte ?</span> <a href="#" id="goLogin" style="color:var(--gold);text-decoration:none;" data-i18n="login.link.login">Se connecter</a></p>
       </div>
     </div>
   </div>
 </div>
 
+<script src="/ui.js"></script>
 <script>
 // Redirect if already logged in
 fetch('/api/auth/me').then(r => { if (r.ok) location.href = '/dashboard'; });
+
+// Affiche les erreurs OAuth passées en paramètre URL
+const urlError = new URLSearchParams(location.search).get('error');
+if (urlError === 'google') {
+  const el = document.getElementById('globalError');
+  el.style.display = 'block';
+  el.innerHTML = '<div class="global-error">La connexion Google a échoué. Réessaie ou utilise ton email.</div>';
+} else if (urlError === 'google_not_configured') {
+  const el = document.getElementById('globalError');
+  el.style.display = 'block';
+  el.innerHTML = '<div class="global-error">La connexion Google n\'est pas encore activée.</div>';
+}
 
 const tabLogin    = document.getElementById('tabLogin');
 const tabRegister = document.getElementById('tabRegister');
 const panelLogin  = document.getElementById('panelLogin');
 const panelReg    = document.getElementById('panelRegister');
 
-function showLogin()    { tabLogin.classList.add('active');    tabRegister.classList.remove('active'); panelLogin.classList.add('active'); panelReg.classList.remove('active'); }
-function showRegister() { tabRegister.classList.add('active'); tabLogin.classList.remove('active');    panelReg.classList.add('active');   panelLogin.classList.remove('active'); }
+function showLogin() {
+  tabLogin.classList.add('active'); tabRegister.classList.remove('active');
+  panelLogin.classList.add('active'); panelReg.classList.remove('active');
+}
+function showRegister() {
+  tabRegister.classList.add('active'); tabLogin.classList.remove('active');
+  panelReg.classList.add('active'); panelLogin.classList.remove('active');
+}
 
 tabLogin.addEventListener('click', showLogin);
 tabRegister.addEventListener('click', showRegister);
@@ -147,27 +194,27 @@ function setError(id, msg) {
 document.getElementById('btnLogin').addEventListener('click', async () => {
   setError('loginError', '');
   const btn = document.getElementById('btnLogin');
-  btn.disabled = true; btn.textContent = 'Connexion…';
+  btn.disabled = true; btn.textContent = window.__('login.btn.logging-in');
   const [ok, data] = await apiPost('/api/auth/login', {
     email: document.getElementById('loginEmail').value,
     password: document.getElementById('loginPassword').value
   });
   if (ok) { location.href = '/dashboard'; }
-  else { setError('loginError', data.error); btn.disabled = false; btn.textContent = 'Se connecter'; }
+  else { setError('loginError', data.error); btn.disabled = false; btn.textContent = window.__('login.btn.login'); }
 });
 
 // REGISTER
 document.getElementById('btnRegister').addEventListener('click', async () => {
   setError('registerError', '');
   const btn = document.getElementById('btnRegister');
-  btn.disabled = true; btn.textContent = 'Création…';
+  btn.disabled = true; btn.textContent = window.__('login.btn.creating');
   const [ok, data] = await apiPost('/api/auth/register', {
     name: document.getElementById('registerName').value,
     email: document.getElementById('registerEmail').value,
     password: document.getElementById('registerPassword').value
   });
   if (ok) { location.href = '/dashboard'; }
-  else { setError('registerError', data.error); btn.disabled = false; btn.textContent = 'Créer mon compte'; }
+  else { setError('registerError', data.error); btn.disabled = false; btn.textContent = window.__('login.btn.register'); }
 });
 
 // Enter key

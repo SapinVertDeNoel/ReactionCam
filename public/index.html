@@ -329,6 +329,7 @@
     color: var(--danger);
     letter-spacing: 0.06em;
   }
+  .error-msg a { color: var(--gold); text-decoration: underline; }
 
   /* ── Anim ── */
   @keyframes fadeUp {
@@ -349,28 +350,31 @@
 
 <header>
   <a class="logo" href="/">Reaction<span>Cam</span></a>
-  <span class="tagline">Capture les vraies réactions</span>
+  <span class="tagline" data-i18n="index.tagline">Capture les vraies réactions</span>
+  <div id="rc-controls-mount"></div>
   <div id="authNav" style="display:flex;gap:12px;align-items:center;">
-    <a href="/login" style="font-size:11px;letter-spacing:0.12em;color:var(--muted);text-decoration:none;text-transform:uppercase;">Connexion</a>
-    <a href="/register" style="font-size:11px;letter-spacing:0.12em;color:var(--gold);text-decoration:none;text-transform:uppercase;">Créer un compte</a>
+    <a href="/pricing" style="font-size:11px;letter-spacing:0.12em;color:var(--muted);text-decoration:none;text-transform:uppercase;" data-i18n="nav.pricing">Tarifs</a>
+    <a href="/login" style="font-size:11px;letter-spacing:0.12em;color:var(--muted);text-decoration:none;text-transform:uppercase;" data-i18n="nav.login">Connexion</a>
+    <a href="/register" style="font-size:11px;letter-spacing:0.12em;color:var(--gold);text-decoration:none;text-transform:uppercase;" data-i18n="nav.register">Créer un compte</a>
   </div>
   <div id="userNav" style="display:none;gap:12px;align-items:center;">
-    <a href="/dashboard" style="font-size:11px;letter-spacing:0.12em;color:var(--muted);text-decoration:none;text-transform:uppercase;">Mon espace</a>
+    <a href="/pricing" style="font-size:11px;letter-spacing:0.12em;color:var(--muted);text-decoration:none;text-transform:uppercase;" data-i18n="nav.pricing">Tarifs</a>
+    <a href="/dashboard" style="font-size:11px;letter-spacing:0.12em;color:var(--muted);text-decoration:none;text-transform:uppercase;" data-i18n="nav.dashboard">Mon espace</a>
     <span id="navUserName" style="font-size:11px;color:var(--gold);letter-spacing:0.08em;"></span>
   </div>
 </header>
 
 <main class="hero">
-  <h1>Partage une vidéo.<br><em>Capture la réaction.</em></h1>
-  <p class="subtitle">Génère un lien · Le spectateur est filmé · Tu récupères sa réaction</p>
+  <h1 data-i18n-html="index.h1">Partage une vidéo.<br><em>Capture la réaction.</em></h1>
+  <p class="subtitle" data-i18n="index.subtitle">Génère un lien · Le spectateur est filmé · Tu récupères sa réaction</p>
 
   <div class="drop-zone" id="dropZone">
     <svg class="drop-icon" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.5">
       <rect x="6" y="6" width="36" height="36" rx="4"/>
       <polygon points="19,16 33,24 19,32" fill="currentColor" stroke="none" opacity="0.4"/>
     </svg>
-    <p class="drop-label"><strong>Glisse ta vidéo ici</strong></p>
-    <p class="drop-label">ou <strong>clique pour sélectionner</strong></p>
+    <p class="drop-label" data-i18n-html="index.drop.main"><strong>Glisse ta vidéo ici</strong></p>
+    <p class="drop-label" data-i18n-html="index.drop.or">ou <strong>clique pour sélectionner</strong></p>
     <p class="drop-limit">MP4, MOV, WEBM · max 500 MB</p>
     <input type="file" id="fileInput" accept="video/*">
   </div>
@@ -383,12 +387,12 @@
   </div>
 
   <div class="result-box" id="resultBox">
-    <p class="result-title">Lien prêt</p>
+    <p class="result-title" data-i18n="index.result.title">Lien prêt</p>
     <div class="link-row">
       <input class="link-input" id="linkInput" type="text" readonly>
-      <button class="copy-btn" id="copyBtn">Copier</button>
+      <button class="copy-btn" id="copyBtn" data-i18n="index.copy">Copier</button>
     </div>
-    <button class="upload-another" id="uploadAnother">↩ Uploader une autre vidéo</button>
+    <button class="upload-another" id="uploadAnother" data-i18n="index.upload.again">↩ Uploader une autre vidéo</button>
   </div>
 
   <p class="error-msg" id="errorMsg"></p>
@@ -397,26 +401,27 @@
 <section class="steps">
   <div class="step">
     <div class="step-num">01</div>
-    <div class="step-title">Upload</div>
-    <p class="step-desc">Dépose ta vidéo sur ce site. Un lien unique est généré instantanément.</p>
+    <div class="step-title" data-i18n="index.step1.title">Upload</div>
+    <p class="step-desc" data-i18n="index.step1.desc">Dépose ta vidéo sur ce site. Un lien unique est généré instantanément.</p>
   </div>
   <div class="step">
     <div class="step-num">02</div>
-    <div class="step-title">Partage</div>
-    <p class="step-desc">Envoie le lien à tes amis. Ils devront accepter d'activer leur webcam.</p>
+    <div class="step-title" data-i18n="index.step2.title">Partage</div>
+    <p class="step-desc" data-i18n="index.step2.desc">Envoie le lien à tes amis. Ils devront accepter d'activer leur webcam.</p>
   </div>
   <div class="step">
     <div class="step-num">03</div>
-    <div class="step-title">Réaction</div>
-    <p class="step-desc">Leur réaction est capturée. Vidéo combinée générée automatiquement.</p>
+    <div class="step-title" data-i18n="index.step3.title">Réaction</div>
+    <p class="step-desc" data-i18n="index.step3.desc">Leur réaction est capturée. Vidéo combinée générée automatiquement.</p>
   </div>
 </section>
 
 <footer>
   <span>© ReactionCam</span>
-  <span>Données traitées selon le RGPD · Consentement explicite requis</span>
+  <span data-i18n="index.footer.legal">Données traitées selon le RGPD · Consentement explicite requis</span>
 </footer>
 
+<script src="/ui.js"></script>
 <script>
 // Auth check
 fetch('/api/auth/me').then(r => {
@@ -427,18 +432,17 @@ fetch('/api/auth/me').then(r => {
   });
 });
 
-const dropZone = document.getElementById('dropZone');
-const fileInput = document.getElementById('fileInput');
+const dropZone      = document.getElementById('dropZone');
+const fileInput     = document.getElementById('fileInput');
 const uploadProgress = document.getElementById('uploadProgress');
-const progressBar = document.getElementById('progressBar');
+const progressBar   = document.getElementById('progressBar');
 const progressLabel = document.getElementById('progressLabel');
-const resultBox = document.getElementById('resultBox');
-const linkInput = document.getElementById('linkInput');
-const copyBtn = document.getElementById('copyBtn');
+const resultBox     = document.getElementById('resultBox');
+const linkInput     = document.getElementById('linkInput');
+const copyBtn       = document.getElementById('copyBtn');
 const uploadAnother = document.getElementById('uploadAnother');
-const errorMsg = document.getElementById('errorMsg');
+const errorMsg      = document.getElementById('errorMsg');
 
-// Drop zone interactions
 dropZone.addEventListener('click', () => fileInput.click());
 
 dropZone.addEventListener('dragover', e => {
@@ -463,11 +467,11 @@ fileInput.addEventListener('change', () => {
 
 function handleFile(file) {
   if (!file.type.startsWith('video/')) {
-    showError('Seuls les fichiers vidéo sont acceptés.');
+    showError(window.__('index.err.type'));
     return;
   }
   if (file.size > 500 * 1024 * 1024) {
-    showError('Le fichier dépasse la limite de 500 MB.');
+    showError(window.__('index.err.size'));
     return;
   }
   uploadFile(file);
@@ -487,7 +491,7 @@ function uploadFile(file) {
     if (e.lengthComputable) {
       const pct = Math.round((e.loaded / e.total) * 100);
       progressBar.style.width = pct + '%';
-      progressLabel.textContent = `Envoi en cours… ${pct}%`;
+      progressLabel.textContent = window.__('index.uploading') + ' ' + pct + '%';
     }
   });
 
@@ -498,27 +502,35 @@ function uploadFile(file) {
     } else if (xhr.status === 401) {
       uploadProgress.style.display = 'none';
       dropZone.style.display = '';
-      showError('Tu dois être connecté pour uploader. Redirection...');
+      showError(window.__('index.err.auth'));
       setTimeout(() => location.href = '/login', 1500);
+    } else if (xhr.status === 403) {
+      uploadProgress.style.display = 'none';
+      dropZone.style.display = '';
+      let data = {};
+      try { data = JSON.parse(xhr.responseText); } catch {}
+      if (data.limitReached) {
+        showError(data.error + ' → <a href="/pricing">' + window.__('nav.pricing') + '</a>', true);
+      } else {
+        showError(data.error || 'Accès refusé');
+      }
     } else {
       uploadProgress.style.display = 'none';
       dropZone.style.display = '';
       let msg = 'Erreur ' + xhr.status;
       try { msg = JSON.parse(xhr.responseText).error || msg; } catch {}
       showError(msg);
-      console.error('[upload] échec:', xhr.status, xhr.responseText);
     }
   });
 
   xhr.addEventListener('error', () => {
     uploadProgress.style.display = 'none';
     dropZone.style.display = '';
-    showError('Erreur réseau. Vérifie ta connexion.');
-    console.error('[upload] network error');
+    showError(window.__('index.err.network'));
   });
 
   xhr.open('POST', '/upload');
-  xhr.withCredentials = true;  // IMPORTANT : envoie les cookies de session
+  xhr.withCredentials = true;
   xhr.send(formData);
 }
 
@@ -528,17 +540,18 @@ function showResult(link) {
   linkInput.value = link;
 }
 
-function showError(msg) {
-  errorMsg.textContent = msg;
+function showError(msg, isHtml = false) {
+  if (isHtml) errorMsg.innerHTML = msg;
+  else errorMsg.textContent = msg;
   errorMsg.style.display = 'block';
 }
 
 copyBtn.addEventListener('click', () => {
   navigator.clipboard.writeText(linkInput.value).then(() => {
-    copyBtn.textContent = '✓ Copié';
+    copyBtn.textContent = window.__('copied');
     copyBtn.classList.add('copied');
     setTimeout(() => {
-      copyBtn.textContent = 'Copier';
+      copyBtn.textContent = window.__('index.copy');
       copyBtn.classList.remove('copied');
     }, 2000);
   });

@@ -9,17 +9,23 @@ const mongoose   = require('mongoose');
 const MongoStore = require('connect-mongo');
 const cloudinary = require('cloudinary').v2;
 const { CloudinaryStorage } = require('multer-storage-cloudinary');
+const cron           = require('node-cron');
+const passport       = require('passport');
+const GoogleStrategy = require('passport-google-oauth20').Strategy;
 
 const app  = express();
 const PORT = process.env.PORT || 3000;
 const IS_PROD = process.env.NODE_ENV === 'production' || !!process.env.RENDER;
+
+const stripe = process.env.STRIPE_SECRET_KEY
+  ? require('stripe')(process.env.STRIPE_SECRET_KEY)
+  : null;
 
 // ── Variables d'environnement requises ────────────────────────────────────────
 const REQUIRED_ENV = ['MONGODB_URI', 'CLOUDINARY_CLOUD_NAME', 'CLOUDINARY_API_KEY', 'CLOUDINARY_API_SECRET'];
 const missing = REQUIRED_ENV.filter(k => !process.env[k]);
 if (missing.length) {
   console.error('❌ Variables manquantes :', missing.join(', '));
-  console.error('   Crée un fichier .env en te basant sur .env.example');
   process.exit(1);
 }
 
@@ -35,12 +41,31 @@ mongoose.connect(process.env.MONGODB_URI)
   .then(() => console.log('✅ MongoDB connecté'))
   .catch(err => { console.error('❌ MongoDB :', err.message); process.exit(1); });
 
+// ── Plans ─────────────────────────────────────────────────────────────────────
+const PLANS = {
+  free:  { label: 'Gratuit', retentionDays: 90,   maxVideos: 3    },
+  pro:   { label: 'Pro',     retentionDays: null,  maxVideos: null },
+  admin: { label: 'Admin',   retentionDays: null,  maxVideos: null },
+};
+
+function expiresAtForPlan(plan) {
+  const days = PLANS[plan]?.retentionDays;
+  if (!days) return null;
+  const d = new Date();
+  d.setDate(d.getDate() + days);
+  return d;
+}
+
 // ── Modèles ───────────────────────────────────────────────────────────────────
 const User = mongoose.model('User', new mongoose.Schema({
-  email:     { type: String, unique: true, lowercase: true, required: true },
-  password:  { type: String, required: true },
-  name:      { type: String, required: true },
-  createdAt: { type: Date, default: Date.now }
+  email:                { type: String, unique: true, lowercase: true, required: true },
+  password:             { type: String }, // optionnel pour les comptes Google
+  googleId:             { type: String, sparse: true, index: true },
+  name:                 { type: String, required: true },
+  plan:                 { type: String, enum: ['free', 'pro', 'admin'], default: 'free' },
+  stripeCustomerId:     String,
+  stripeSubscriptionId: String,
+  createdAt:            { type: Date, default: Date.now }
 }));
 
 const Video = mongoose.model('Video', new mongoose.Schema({
@@ -49,6 +74,7 @@ const Video = mongoose.model('Video', new mongoose.Schema({
   url:          { type: String, required: true },
   originalName: String,
   size:         Number,
+  expiresAt:    { type: Date, default: null, index: true },
   createdAt:    { type: Date, default: Date.now }
 }));
 
@@ -77,9 +103,102 @@ app.use(session({
   }
 }));
 
+// ── Google OAuth ──────────────────────────────────────────────────────────────
+if (process.env.GOOGLE_CLIENT_ID) {
+  passport.use(new GoogleStrategy({
+    clientID:     process.env.GOOGLE_CLIENT_ID,
+    clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+    callbackURL:  process.env.GOOGLE_CALLBACK_URL || 'http://localhost:3000/auth/google/callback',
+  }, async (accessToken, refreshToken, profile, done) => {
+    try {
+      // Cherche par googleId
+      let user = await User.findOne({ googleId: profile.id });
+      if (user) return done(null, user);
+
+      // Cherche par email pour lier un compte existant
+      const email = profile.emails?.[0]?.value?.toLowerCase();
+      if (email) {
+        user = await User.findOne({ email });
+        if (user) {
+          user.googleId = profile.id;
+          await user.save();
+          return done(null, user);
+        }
+      }
+
+      // Crée un nouveau compte
+      user = await User.create({
+        email:    email || `google_${profile.id}@noemail.local`,
+        name:     profile.displayName || 'Utilisateur',
+        googleId: profile.id,
+      });
+      done(null, user);
+    } catch (e) {
+      done(e);
+    }
+  }));
+}
+
+// ── Webhook Stripe : body brut avant les parsers globaux ──────────────────────
+app.post('/api/billing/webhook',
+  express.raw({ type: 'application/json' }),
+  async (req, res) => {
+    if (!stripe) return res.status(503).send('Stripe non configuré');
+    const sig = req.headers['stripe-signature'];
+    let event;
+    try {
+      event = stripe.webhooks.constructEvent(req.body, sig, process.env.STRIPE_WEBHOOK_SECRET);
+    } catch (err) {
+      console.error('[WEBHOOK] Signature invalide :', err.message);
+      return res.status(400).send(`Webhook Error: ${err.message}`);
+    }
+
+    try {
+      if (event.type === 'checkout.session.completed') {
+        const s = event.data.object;
+        const user = await User.findById(s.client_reference_id);
+        if (user) {
+          user.stripeCustomerId     = s.customer;
+          user.stripeSubscriptionId = s.subscription;
+          user.plan = 'pro';
+          await user.save();
+          await Video.updateMany({ userId: user._id }, { expiresAt: null });
+          console.log(`✅ Plan Pro activé : ${user.email}`);
+        }
+      }
+
+      if (event.type === 'customer.subscription.deleted') {
+        const sub = event.data.object;
+        const user = await User.findOne({ stripeCustomerId: sub.customer });
+        if (user && user.plan === 'pro') {
+          user.plan = 'free';
+          user.stripeSubscriptionId = null;
+          await user.save();
+          const expiry = expiresAtForPlan('free');
+          await Video.updateMany({ userId: user._id, expiresAt: null }, { expiresAt: expiry });
+          console.log(`⬇️  Plan rétrogradé à Free : ${user.email}`);
+        }
+      }
+
+      if (event.type === 'customer.subscription.updated') {
+        const sub = event.data.object;
+        if (sub.status !== 'active' && sub.status !== 'trialing') {
+          const user = await User.findOne({ stripeCustomerId: sub.customer });
+          console.log(`⚠️  Abonnement ${sub.status} pour ${user?.email}`);
+        }
+      }
+    } catch (e) {
+      console.error('[WEBHOOK] Traitement :', e.message);
+    }
+
+    res.json({ received: true });
+  }
+);
+
 // ── Middleware ────────────────────────────────────────────────────────────────
-app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(express.json());
+app.use(passport.initialize());
 app.use(express.static(path.join(__dirname, 'public')));
 
 // ── Auth guard ────────────────────────────────────────────────────────────────
@@ -88,7 +207,7 @@ function requireAuth(req, res, next) {
   next();
 }
 
-// ── Multer → Cloudinary (streaming direct, rien écrit sur disque) ─────────────
+// ── Multer → Cloudinary ───────────────────────────────────────────────────────
 const uploadVideo = multer({
   storage: new CloudinaryStorage({
     cloudinary,
@@ -140,7 +259,10 @@ app.post('/api/auth/login', async (req, res) => {
   try {
     const { email, password } = req.body;
     const user = await User.findOne({ email: (email || '').toLowerCase() });
-    if (!user || !(await bcrypt.compare(password || '', user.password)))
+    if (!user) return res.status(401).json({ error: 'Email ou mot de passe incorrect' });
+    if (!user.password)
+      return res.status(401).json({ error: 'Ce compte utilise la connexion Google. Clique sur "Continuer avec Google".' });
+    if (!(await bcrypt.compare(password || '', user.password)))
       return res.status(401).json({ error: 'Email ou mot de passe incorrect' });
 
     req.session.userId   = user._id.toString();
@@ -163,10 +285,37 @@ app.get('/api/auth/me', async (req, res) => {
   try {
     const user = await User.findById(req.session.userId);
     if (!user) return res.status(401).json({ error: 'Introuvable' });
-    res.json({ id: user._id, name: user.name, email: user.email });
+    const planInfo = PLANS[user.plan];
+    res.json({
+      id:        user._id,
+      name:      user.name,
+      email:     user.email,
+      plan:      user.plan,
+      planLabel: planInfo.label,
+      maxVideos: planInfo.maxVideos,
+    });
   } catch (e) {
     res.status(500).json({ error: 'Erreur serveur' });
   }
+});
+
+// ── Google OAuth routes ───────────────────────────────────────────────────────
+app.get('/auth/google', (req, res, next) => {
+  if (!process.env.GOOGLE_CLIENT_ID)
+    return res.redirect('/login?error=google_not_configured');
+  passport.authenticate('google', { scope: ['profile', 'email'], session: false })(req, res, next);
+});
+
+app.get('/auth/google/callback', (req, res, next) => {
+  if (!process.env.GOOGLE_CLIENT_ID)
+    return res.redirect('/login?error=google_not_configured');
+  passport.authenticate('google', { session: false }, async (err, user) => {
+    if (err || !user) return res.redirect('/login?error=google');
+    req.session.userId   = user._id.toString();
+    req.session.userName = user.name;
+    await req.session.save();
+    res.redirect('/dashboard');
+  })(req, res, next);
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -182,12 +331,27 @@ app.post('/upload', requireAuth, (req, res) => {
     if (!req.file) return res.status(400).json({ error: 'Aucun fichier reçu' });
 
     try {
+      const user = await User.findById(req.session.userId);
+      const plan = PLANS[user?.plan || 'free'];
+
+      if (plan.maxVideos !== null) {
+        const count = await Video.countDocuments({ userId: req.session.userId });
+        if (count >= plan.maxVideos) {
+          await cloudinary.uploader.destroy(req.file.filename, { resource_type: 'video' });
+          return res.status(403).json({
+            error: `Limite atteinte : le plan gratuit permet ${plan.maxVideos} vidéos maximum.`,
+            limitReached: true,
+          });
+        }
+      }
+
       const video = await Video.create({
         userId:       req.session.userId,
         cloudinaryId: req.file.filename,
         url:          req.file.path,
         originalName: req.file.originalname,
-        size:         req.file.size
+        size:         req.file.size,
+        expiresAt:    expiresAtForPlan(user?.plan || 'free')
       });
       res.json({ id: video._id, link: `${req.protocol}://${req.get('host')}/watch/${video._id}` });
     } catch (e) {
@@ -209,6 +373,8 @@ app.get('/api/video/:id', async (req, res) => {
 
 app.get('/api/dashboard', requireAuth, async (req, res) => {
   try {
+    const user   = await User.findById(req.session.userId);
+    const plan   = PLANS[user?.plan || 'free'];
     const videos = await Video.find({ userId: req.session.userId }).sort({ createdAt: -1 });
 
     const result = await Promise.all(videos.map(async v => {
@@ -219,7 +385,8 @@ app.get('/api/dashboard', requireAuth, async (req, res) => {
         originalName: v.originalName,
         size:         v.size,
         createdAt:    v.createdAt,
-        reactions: reactions.map(r => ({
+        expiresAt:    v.expiresAt,
+        reactions:    reactions.map(r => ({
           id:         r._id,
           viewerName: r.viewerName || 'Anonyme',
           url:        r.url,
@@ -229,7 +396,13 @@ app.get('/api/dashboard', requireAuth, async (req, res) => {
       };
     }));
 
-    res.json({ videos: result });
+    res.json({
+      videos:     result,
+      plan:       user?.plan || 'free',
+      planLabel:  plan.label,
+      maxVideos:  plan.maxVideos,
+      videoCount: videos.length,
+    });
   } catch (e) {
     console.error('[DASHBOARD]', e.message);
     res.status(500).json({ error: 'Erreur serveur' });
@@ -266,16 +439,113 @@ app.post('/reaction/:id',
 );
 
 // ═══════════════════════════════════════════════════════════════════════════════
+// STRIPE BILLING
+// ═══════════════════════════════════════════════════════════════════════════════
+
+app.post('/api/billing/checkout', requireAuth, async (req, res) => {
+  if (!stripe) return res.status(503).json({ error: 'Paiement non configuré' });
+  try {
+    const user = await User.findById(req.session.userId);
+    if (user.plan === 'pro' || user.plan === 'admin')
+      return res.status(400).json({ error: 'Tu es déjà sur le plan Pro' });
+
+    const origin  = `${req.protocol}://${req.get('host')}`;
+    const session = await stripe.checkout.sessions.create({
+      customer:            user.stripeCustomerId || undefined,
+      customer_email:      !user.stripeCustomerId ? user.email : undefined,
+      client_reference_id: user._id.toString(),
+      mode:                'subscription',
+      line_items:          [{ price: process.env.STRIPE_PRICE_ID, quantity: 1 }],
+      success_url:         `${origin}/dashboard?upgrade=success`,
+      cancel_url:          `${origin}/pricing`,
+      locale:              'fr',
+    });
+
+    res.json({ url: session.url });
+  } catch (e) {
+    console.error('[BILLING CHECKOUT]', e.message);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+app.post('/api/billing/portal', requireAuth, async (req, res) => {
+  if (!stripe) return res.status(503).json({ error: 'Paiement non configuré' });
+  try {
+    const user = await User.findById(req.session.userId);
+    if (!user.stripeCustomerId)
+      return res.status(400).json({ error: 'Aucun abonnement actif' });
+
+    const origin = `${req.protocol}://${req.get('host')}`;
+    const portal = await stripe.billingPortal.sessions.create({
+      customer:   user.stripeCustomerId,
+      return_url: `${origin}/dashboard`,
+    });
+
+    res.json({ url: portal.url });
+  } catch (e) {
+    console.error('[BILLING PORTAL]', e.message);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
 // PAGES
 // ═══════════════════════════════════════════════════════════════════════════════
 app.get('/watch/:id',  (req, res) => res.sendFile(path.join(__dirname, 'public', 'watch.html')));
 app.get('/dashboard',  (req, res) => res.sendFile(path.join(__dirname, 'public', 'dashboard.html')));
 app.get('/login',      (req, res) => res.sendFile(path.join(__dirname, 'public', 'login.html')));
 app.get('/register',   (req, res) => res.sendFile(path.join(__dirname, 'public', 'login.html')));
+app.get('/pricing',    (req, res) => res.sendFile(path.join(__dirname, 'public', 'pricing.html')));
 
 app.use((err, req, res, next) => {
   console.error('Erreur globale :', err.message);
   res.status(500).json({ error: err.message });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// NETTOYAGE DES VIDÉOS EXPIRÉES
+// ═══════════════════════════════════════════════════════════════════════════════
+
+async function deleteExpiredVideos() {
+  const now     = new Date();
+  const expired = await Video.find({ expiresAt: { $lte: now } });
+  if (!expired.length) return;
+
+  console.log(`🗑️  Nettoyage : ${expired.length} vidéo(s) expirée(s)`);
+
+  for (const video of expired) {
+    try {
+      const reactions = await Reaction.find({ videoId: video._id });
+      for (const r of reactions) {
+        await cloudinary.uploader.destroy(r.cloudinaryId, { resource_type: 'video' });
+      }
+      await Reaction.deleteMany({ videoId: video._id });
+      await cloudinary.uploader.destroy(video.cloudinaryId, { resource_type: 'video' });
+      await Video.deleteOne({ _id: video._id });
+      console.log(`  ✓ Supprimé : ${video.originalName} (${video._id})`);
+    } catch (e) {
+      console.error(`  ✗ Échec suppression ${video._id} :`, e.message);
+    }
+  }
+}
+
+// Tourne chaque nuit à 3h UTC
+cron.schedule('0 3 * * *', () => {
+  console.log('⏰ Cron nettoyage lancé');
+  deleteExpiredVideos().catch(e => console.error('Cron erreur :', e.message));
+});
+
+// Route admin pour déclencher manuellement
+app.post('/api/admin/cleanup', async (req, res) => {
+  if (req.headers['x-admin-key'] !== process.env.ADMIN_KEY) {
+    return res.status(403).json({ error: 'Forbidden' });
+  }
+  try {
+    await deleteExpiredVideos();
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
 });
 
 app.listen(PORT, () => console.log(`\n🎬 ReactionCam → http://localhost:${PORT} (${IS_PROD ? 'PROD' : 'DEV'})\n`));

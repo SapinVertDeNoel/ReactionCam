@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ReactionCam — Tarifs</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,600;1,300&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0a0a0a; --surface: #111; --surface2: #141414;
+    --border: #222; --border2: #2a2a2a;
+    --gold: #c9a84c; --gold-dim: #7a6330;
+    --text: #e8e0d0; --muted: #5a5245; --green: #4a7c59;
+  }
+
+  html, body { min-height: 100vh; background: var(--bg); color: var(--text); font-family: 'DM Mono', monospace; font-size: 14px; line-height: 1.6; }
+
+  body::before {
+    content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 0; opacity: 0.4;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+  }
+
+  .wrap { position: relative; z-index: 1; min-height: 100vh; display: flex; flex-direction: column; }
+
+  /* ── Header ── */
+  header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 20px 48px; border-bottom: 1px solid var(--border);
+    position: sticky; top: 0; background: rgba(10,10,10,0.95);
+    backdrop-filter: blur(8px); z-index: 100; gap: 16px;
+  }
+  .logo { font-family: 'Cormorant Garamond', serif; font-size: 22px; font-weight: 300; letter-spacing: 0.12em; color: var(--gold); text-decoration: none; }
+  .logo span { font-style: italic; }
+  .nav-links { display: flex; gap: 24px; align-items: center; }
+  .nav-links a { font-size: 11px; letter-spacing: 0.12em; color: var(--muted); text-decoration: none; text-transform: uppercase; transition: color 0.2s; }
+  .nav-links a:hover { color: var(--text); }
+  .nav-links a.active { color: var(--gold); }
+
+  /* ── Hero ── */
+  .hero { text-align: center; padding: 80px 48px 64px; }
+  h1 { font-family: 'Cormorant Garamond', serif; font-size: clamp(40px, 5vw, 72px); font-weight: 300; margin-bottom: 16px; }
+  h1 em { font-style: italic; color: var(--gold); }
+  .hero-sub { color: var(--muted); font-size: 13px; letter-spacing: 0.1em; }
+
+  /* ── Plans ── */
+  .plans {
+    display: flex; justify-content: center; gap: 24px;
+    padding: 0 48px 96px; flex-wrap: wrap; align-items: stretch;
+  }
+
+  .plan-card {
+    width: 320px; border: 1px solid var(--border2);
+    border-radius: 4px; background: var(--surface);
+    display: flex; flex-direction: column; padding: 40px 36px;
+    transition: border-color 0.3s;
+  }
+
+  .plan-card.featured {
+    border-color: var(--gold-dim);
+    background: #0f0e09;
+    position: relative;
+  }
+
+  .plan-card.featured::before {
+    content: 'Recommandé';
+    position: absolute; top: -12px; left: 50%; transform: translateX(-50%);
+    background: var(--gold); color: #0a0a0a;
+    font-size: 10px; letter-spacing: 0.15em; text-transform: uppercase;
+    padding: 3px 12px; border-radius: 2px;
+  }
+
+  .plan-name {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 28px; font-weight: 300; margin-bottom: 8px;
+  }
+  .plan-name em { font-style: italic; color: var(--gold); }
+
+  .plan-price { margin-bottom: 8px; }
+  .plan-price .amount { font-size: 42px; font-weight: 300; color: var(--text); line-height: 1; }
+  .plan-price .currency { font-size: 18px; vertical-align: top; margin-top: 8px; display: inline-block; color: var(--muted); }
+  .plan-price .period { font-size: 12px; color: var(--muted); letter-spacing: 0.08em; }
+
+  .plan-desc { font-size: 12px; color: var(--muted); margin-bottom: 32px; line-height: 1.7; }
+
+  .plan-features { list-style: none; margin-bottom: 36px; flex: 1; display: flex; flex-direction: column; gap: 12px; }
+  .plan-features li { font-size: 12px; display: flex; align-items: flex-start; gap: 10px; }
+  .plan-features li::before { content: '—'; color: var(--gold-dim); flex-shrink: 0; }
+  .plan-features li.included::before { content: '✓'; color: var(--green); }
+
+  .btn-plan {
+    display: block; width: 100%; padding: 14px;
+    font-family: 'DM Mono', monospace; font-size: 11px;
+    letter-spacing: 0.15em; text-transform: uppercase;
+    text-align: center; text-decoration: none;
+    border-radius: 2px; cursor: pointer; transition: all 0.2s;
+    border: none;
+  }
+
+  .btn-plan.secondary {
+    background: none; border: 1px solid var(--border2); color: var(--muted);
+  }
+  .btn-plan.secondary:hover { border-color: var(--muted); color: var(--text); }
+
+  .btn-plan.primary {
+    background: var(--gold); color: #0a0a0a;
+  }
+  .btn-plan.primary:hover { background: #e0bb60; }
+  .btn-plan:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  /* ── FAQ ── */
+  .faq { max-width: 640px; margin: 0 auto; padding: 0 48px 80px; }
+  .faq-title { font-family: 'Cormorant Garamond', serif; font-size: 28px; font-weight: 300; margin-bottom: 32px; text-align: center; }
+  .faq-item { border-top: 1px solid var(--border); padding: 20px 0; }
+  .faq-item:last-child { border-bottom: 1px solid var(--border); }
+  .faq-q { font-size: 13px; color: var(--text); margin-bottom: 8px; letter-spacing: 0.04em; }
+  .faq-a { font-size: 12px; color: var(--muted); line-height: 1.7; }
+
+  /* ── Footer ── */
+  footer { padding: 24px 48px; border-top: 1px solid var(--border); display: flex; justify-content: space-between; font-size: 11px; color: #2a2520; letter-spacing: 0.08em; }
+
+  @media (max-width: 720px) {
+    header { padding: 16px 20px; }
+    .hero { padding: 48px 20px 40px; }
+    .plans { padding: 0 20px 64px; }
+    .faq { padding: 0 20px 64px; }
+    footer { padding: 20px; flex-direction: column; gap: 8px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <a class="logo" href="/">Reaction<span>Cam</span></a>
+  <nav class="nav-links">
+    <a href="/" data-i18n="nav.home">Accueil</a>
+    <a href="/pricing" class="active" data-i18n="nav.pricing">Tarifs</a>
+    <span id="navAuth" style="display:flex;gap:16px;">
+      <a href="/login" data-i18n="nav.login">Connexion</a>
+      <a href="/register" style="color:var(--gold);" data-i18n="nav.register">Créer un compte</a>
+    </span>
+    <span id="navUser" style="display:none;gap:16px;">
+      <a href="/dashboard" data-i18n="nav.dashboard">Mon espace</a>
+    </span>
+  </nav>
+  <div id="rc-controls-mount"></div>
+</header>
+
+<main>
+  <div class="hero">
+    <h1 data-i18n-html="pricing.hero.h1">Des plans simples,<br><em>sans surprise.</em></h1>
+    <p class="hero-sub" data-i18n="pricing.hero.sub">Commence gratuitement, passe au Pro quand tu en as besoin.</p>
+  </div>
+
+  <div class="plans">
+
+    <!-- Plan Gratuit -->
+    <div class="plan-card">
+      <div class="plan-name" data-i18n="pricing.free.name">Gratuit</div>
+      <div class="plan-price">
+        <span class="currency">€</span><span class="amount">0</span>
+        <div class="period" data-i18n="pricing.free.period">pour toujours</div>
+      </div>
+      <p class="plan-desc" data-i18n="pricing.free.desc">Parfait pour essayer ReactionCam et partager quelques vidéos.</p>
+      <ul class="plan-features">
+        <li class="included" data-i18n="pricing.feature.3videos">3 vidéos maximum</li>
+        <li class="included" data-i18n="pricing.feature.rx">Réactions illimitées par vidéo</li>
+        <li class="included" data-i18n="pricing.feature.3months">Vidéos conservées 3 mois</li>
+        <li data-i18n="pricing.feature.storage">Stockage illimité</li>
+        <li data-i18n="pricing.feature.permanent">Conservation permanente</li>
+      </ul>
+      <a href="/register" class="btn-plan secondary" id="btnFree" data-i18n="pricing.btn.free">Commencer gratuitement</a>
+    </div>
+
+    <!-- Plan Pro -->
+    <div class="plan-card featured">
+      <div class="plan-name"><em>Pro</em></div>
+      <div class="plan-price">
+        <span class="currency">€</span><span class="amount">5</span>
+        <div class="period" data-i18n="pricing.pro.period">par mois · résiliable à tout moment</div>
+      </div>
+      <p class="plan-desc" data-i18n="pricing.pro.desc">Pour les créateurs sérieux qui veulent tout garder, sans limite.</p>
+      <ul class="plan-features">
+        <li class="included" data-i18n="pricing.feature.unlimited">Vidéos illimitées</li>
+        <li class="included" data-i18n="pricing.feature.rx">Réactions illimitées par vidéo</li>
+        <li class="included" data-i18n="pricing.feature.permanent">Conservation permanente</li>
+        <li class="included" data-i18n="pricing.feature.storage">Stockage illimité</li>
+        <li class="included" data-i18n="pricing.feature.support">Support prioritaire</li>
+      </ul>
+      <button class="btn-plan primary" id="btnPro" data-i18n="pricing.btn.pro">Passer au Pro</button>
+    </div>
+
+  </div>
+
+  <div class="faq">
+    <div class="faq-title" data-i18n="pricing.faq.title">Questions fréquentes</div>
+
+    <div class="faq-item">
+      <div class="faq-q" data-i18n="pricing.faq.1.q">Que se passe-t-il si j'annule mon abonnement Pro ?</div>
+      <div class="faq-a" data-i18n="pricing.faq.1.a">Tes vidéos passent en mode gratuit : elles seront supprimées 90 jours après la résiliation. Tu gardes accès à toutes tes réactions jusqu'à cette date.</div>
+    </div>
+
+    <div class="faq-item">
+      <div class="faq-q" data-i18n="pricing.faq.2.q">Puis-je uploader plus de 3 vidéos avec le plan gratuit ?</div>
+      <div class="faq-a" data-i18n="pricing.faq.2.a">Non, le plan gratuit est limité à 3 vidéos actives simultanément. Supprime une vidéo existante pour en uploader une nouvelle.</div>
+    </div>
+
+    <div class="faq-item">
+      <div class="faq-q" data-i18n="pricing.faq.3.q">Le paiement est-il sécurisé ?</div>
+      <div class="faq-a" data-i18n="pricing.faq.3.a">Oui, le paiement est géré par Stripe, leader mondial du paiement en ligne. Nous ne stockons aucune donnée de carte bancaire.</div>
+    </div>
+
+    <div class="faq-item">
+      <div class="faq-q" data-i18n="pricing.faq.4.q">Les réactions sont-elles limitées en plan gratuit ?</div>
+      <div class="faq-a" data-i18n="pricing.faq.4.a">Non. Le nombre de réactions reçues par vidéo est illimité sur les deux plans.</div>
+    </div>
+  </div>
+</main>
+
+<footer>
+  <span>© ReactionCam</span>
+  <span data-i18n="pricing.footer">Données traitées selon le RGPD · Paiements sécurisés par Stripe</span>
+</footer>
+
+</div>
+<script src="/ui.js"></script>
+<script>
+let me = null;
+
+fetch('/api/auth/me').then(r => {
+  if (!r.ok) return;
+  return r.json();
+}).then(u => {
+  if (!u) return;
+  me = u;
+  document.getElementById('navAuth').style.display = 'none';
+  document.getElementById('navUser').style.display = 'flex';
+
+  if (u.plan === 'pro' || u.plan === 'admin') {
+    const btn = document.getElementById('btnPro');
+    btn.textContent = window.__('pricing.btn.pro.manage');
+    btn.addEventListener('click', openPortal);
+    document.getElementById('btnFree').textContent = window.__('pricing.btn.free.current');
+    document.getElementById('btnFree').style.opacity = '0.4';
+    document.getElementById('btnFree').style.pointerEvents = 'none';
+  } else {
+    document.getElementById('btnFree').textContent = window.__('pricing.btn.free.current');
+    document.getElementById('btnFree').style.opacity = '0.4';
+    document.getElementById('btnFree').style.pointerEvents = 'none';
+  }
+});
+
+document.getElementById('btnPro').addEventListener('click', startCheckout);
+
+document.addEventListener('rc-langchange', () => {
+  const btn = document.getElementById('btnPro');
+  if (!me) { btn.textContent = window.__('pricing.btn.pro'); return; }
+  if (me.plan === 'pro' || me.plan === 'admin') {
+    btn.textContent = window.__('pricing.btn.pro.manage');
+  } else {
+    btn.textContent = window.__('pricing.btn.pro');
+  }
+  const btnFree = document.getElementById('btnFree');
+  if (me) {
+    btnFree.textContent = window.__('pricing.btn.free.current');
+  }
+});
+
+async function startCheckout() {
+  if (!me) { location.href = '/register'; return; }
+  if (me.plan === 'pro' || me.plan === 'admin') { openPortal(); return; }
+
+  const btn = document.getElementById('btnPro');
+  btn.disabled = true;
+  btn.textContent = window.__('loading');
+
+  const r = await fetch('/api/billing/checkout', { method: 'POST' });
+  if (r.status === 503) {
+    btn.disabled = false;
+    btn.textContent = window.__('pricing.btn.pro');
+    alert('Le paiement n\'est pas encore configuré.');
+    return;
+  }
+  const { url, error } = await r.json();
+  if (error) { btn.disabled = false; btn.textContent = window.__('pricing.btn.pro'); alert(error); return; }
+  location.href = url;
+}
+
+async function openPortal() {
+  const btn = document.getElementById('btnPro');
+  btn.disabled = true;
+  btn.textContent = window.__('loading');
+  const r = await fetch('/api/billing/portal', { method: 'POST' });
+  const { url, error } = await r.json();
+  if (error) { btn.disabled = false; btn.textContent = window.__('pricing.btn.pro.manage'); alert(error); return; }
+  location.href = url;
+}
+</script>
+</body>
+</html>
