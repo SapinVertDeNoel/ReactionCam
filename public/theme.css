@@ -35,6 +35,8 @@
 
 /* Logo & titre : le JS (logo-theme.js) change le src selon le thème */
 /* Sizing only — no filter needed */
-.logo { align-self: stretch; }
+.logo { align-self: center; }
+.logo img[src="/logo.svg"],
+.logo img[src="/logo-dark.svg"] { height: 40px; width: auto; display: block; }
 .logo img[src="/titre.svg"],
-.logo img[src="/titre-light.svg"] { height: 100%; width: auto; display: block; }
+.logo img[src="/titre-light.svg"] { height: 40px; width: auto; display: block; }
