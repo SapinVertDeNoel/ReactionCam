@@ -51,8 +51,7 @@ html, body {
   position: fixed; top: 0; left: 24px; z-index: 100; height: 60px;
   display: inline-flex; align-items: center; gap: 5px; text-decoration: none;
 }
-img[src="/logo.svg"] { filter: invert(1) hue-rotate(180deg); }
-.logo img[src="/titre.svg"] { height: 100%; width: auto; display: block; }
+.logo img[src="/titre.svg"], .logo img[src="/titre-light.svg"] { height: 100%; width: auto; display: block; }
 
 /* ── Card commune ── */
 .card {
@@ -219,6 +218,7 @@ img[src="/logo.svg"] { filter: invert(1) hue-rotate(180deg); }
   }
 }
 </style>
+<script src="/logo-theme.js" defer></script>
 </head>
 <body>
 

@@ -33,15 +33,8 @@
 [data-theme="light"] .consent-list { background: #f5f1ea !important; border-color: #ddd5c8 !important; }
 [data-theme="light"] .plan-card.featured { background: #ede7da !important; }
 
-/* Logo : noir → blanc en mode sombre, rouge conservé */
-img[src="/logo.svg"] { filter: invert(1) hue-rotate(180deg); }
-[data-theme="light"] img[src="/logo.svg"] { filter: none; }
-
-/* Titre : remplit la hauteur du bandeau */
+/* Logo & titre : le JS (logo-theme.js) change le src selon le thème */
+/* Sizing only — no filter needed */
 .logo { align-self: stretch; }
-.logo img[src="/titre.svg"] { height: 100%; width: auto; display: block; }
-
-/* Titre en mode clair : texte noir, rouge conservé */
-[data-theme="light"] img[src="/titre.svg"] {
-  filter: invert(1) hue-rotate(180deg);
-}
+.logo img[src="/titre.svg"],
+.logo img[src="/titre-light.svg"] { height: 100%; width: auto; display: block; }
