@@ -22,6 +22,7 @@
     position: sticky; top: 0; z-index: 100;
   }
   .header-logo { display: inline-flex; align-items: center; gap: 5px; text-decoration: none; }
+  img[src="/logo.svg"] { filter: invert(1); }
   .header-badge { background: var(--gold); color: #0a0a0a; font-size: 9px; letter-spacing: .15em; text-transform: uppercase; padding: 2px 7px; border-radius: 2px; }
   .back-btn { color: var(--muted); text-decoration: none; font-size: 12px; display: flex; align-items: center; gap: 6px; }
   .back-btn:hover { color: var(--text); }
@@ -135,7 +136,7 @@
 <body>
 
 <header class="header">
-  <a class="header-logo" href="/admin"><img src="/logo.svg" alt="" height="40"><img src="/titre.svg" alt="ReactionCam" height="80"></a>
+  <a class="header-logo" href="/admin"><img src="/logo.svg" alt="" height="28"><img src="/titre.svg" alt="ReactionCam" height="32"></a>
   <span class="header-badge">Admin</span>
   <span class="header-spacer"></span>
   <a class="back-btn" href="/admin">← Retour à la liste</a>
