@@ -210,11 +210,12 @@ async function init() {
   badge.className   = `plan-badge ${me.plan}`;
 
   if (me.plan === 'admin') {
+    const badge = document.getElementById('planBadge');
     const adminLink = document.createElement('a');
     adminLink.href = '/admin';
     adminLink.className = 'btn-admin';
     adminLink.textContent = 'Admin';
-    document.getElementById('planBadge').after(adminLink);
+    badge.replaceWith(adminLink);
   }
 
   if (new URLSearchParams(location.search).get('upgrade') === 'success') {
