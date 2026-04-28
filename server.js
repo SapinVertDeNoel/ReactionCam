@@ -242,6 +242,43 @@ function requireAuth(req, res, next) {
   next();
 }
 
+// ── Admin emails & guards ─────────────────────────────────────────────────────
+const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || 'gertrudedu12@gmail.com')
+  .split(',').map(e => e.trim().toLowerCase()).filter(Boolean);
+
+// Synchronise le plan 'admin' au démarrage pour tous les emails admin
+mongoose.connection.once('open', async () => {
+  if (!ADMIN_EMAILS.length) return;
+  await User.updateMany(
+    { email: { $in: ADMIN_EMAILS } },
+    { $set: { plan: 'admin', emailVerified: true } }
+  ).catch(e => console.error('[ADMIN SYNC]', e.message));
+  console.log(`👑 Admins : ${ADMIN_EMAILS.join(', ')}`);
+});
+
+async function requireAdmin(req, res, next) {
+  if (!req.session.userId) return res.status(401).json({ error: 'Non connecté' });
+  try {
+    const user = await User.findById(req.session.userId).select('email plan');
+    if (!user) return res.status(401).json({ error: 'Introuvable' });
+    if (user.plan === 'admin' || ADMIN_EMAILS.includes(user.email)) return next();
+    return res.status(403).json({ error: 'Accès refusé' });
+  } catch (e) {
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+}
+
+async function requireAdminPage(req, res, next) {
+  if (!req.session.userId) return res.redirect('/login');
+  try {
+    const user = await User.findById(req.session.userId).select('email plan');
+    if (user && (user.plan === 'admin' || ADMIN_EMAILS.includes(user.email))) return next();
+    return res.redirect('/dashboard');
+  } catch {
+    res.redirect('/login');
+  }
+}
+
 // ── Email verification helper ─────────────────────────────────────────────────
 async function sendVerificationEmail(user, baseUrl) {
   const token   = crypto.randomBytes(32).toString('hex');
@@ -654,8 +691,199 @@ app.post('/api/billing/portal', requireAuth, async (req, res) => {
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
+// ADMIN API
+// ═══════════════════════════════════════════════════════════════════════════════
+
+app.get('/api/admin/stats', requireAdmin, async (req, res) => {
+  try {
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    const [
+      userTotal, userFree, userPro, userAdmin,
+      userWeek, videoTotal, videoWeek, reactionTotal, reactionWeek,
+      storageAgg, expiringSoon
+    ] = await Promise.all([
+      User.countDocuments(),
+      User.countDocuments({ plan: 'free' }),
+      User.countDocuments({ plan: 'pro' }),
+      User.countDocuments({ plan: 'admin' }),
+      User.countDocuments({ createdAt: { $gte: sevenDaysAgo } }),
+      Video.countDocuments(),
+      Video.countDocuments({ createdAt: { $gte: sevenDaysAgo } }),
+      Reaction.countDocuments(),
+      Reaction.countDocuments({ createdAt: { $gte: sevenDaysAgo } }),
+      Video.aggregate([{ $group: { _id: null, total: { $sum: '$size' } } }]),
+      Video.countDocuments({ expiresAt: { $gte: new Date(), $lte: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) } }),
+    ]);
+
+    // Inscriptions par jour (14 derniers jours)
+    const days = [];
+    for (let i = 13; i >= 0; i--) {
+      const start = new Date(); start.setDate(start.getDate() - i); start.setHours(0, 0, 0, 0);
+      const end   = new Date(start); end.setDate(end.getDate() + 1);
+      const [u, v, r] = await Promise.all([
+        User.countDocuments({ createdAt: { $gte: start, $lt: end } }),
+        Video.countDocuments({ createdAt: { $gte: start, $lt: end } }),
+        Reaction.countDocuments({ createdAt: { $gte: start, $lt: end } }),
+      ]);
+      days.push({ date: start.toISOString().slice(0, 10), users: u, videos: v, reactions: r });
+    }
+
+    res.json({
+      users:     { total: userTotal, free: userFree, pro: userPro, admin: userAdmin, week: userWeek },
+      videos:    { total: videoTotal, week: videoWeek, expiringSoon },
+      reactions: { total: reactionTotal, week: reactionWeek },
+      storage:   { bytes: storageAgg[0]?.total || 0 },
+      chart:     days,
+    });
+  } catch (e) {
+    console.error('[ADMIN STATS]', e.message);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+app.get('/api/admin/users', requireAdmin, async (req, res) => {
+  try {
+    const { search = '', page = 1, limit = 25, plan } = req.query;
+    const query = {};
+    if (search) query.$or = [{ email: new RegExp(search, 'i') }, { name: new RegExp(search, 'i') }];
+    if (plan) query.plan = plan;
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+    const [users, total] = await Promise.all([
+      User.find(query)
+        .select('-password -emailVerificationToken -emailVerificationExpires')
+        .sort({ createdAt: -1 }).skip(skip).limit(parseInt(limit)),
+      User.countDocuments(query),
+    ]);
+    const enriched = await Promise.all(users.map(async u => {
+      const videoCount = await Video.countDocuments({ userId: u._id });
+      return { ...u.toObject(), videoCount };
+    }));
+    res.json({ users: enriched, total, page: parseInt(page), pages: Math.ceil(total / parseInt(limit)) });
+  } catch (e) {
+    console.error('[ADMIN USERS]', e.message);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+app.patch('/api/admin/users/:id/plan', requireAdmin, async (req, res) => {
+  try {
+    const { plan } = req.body;
+    if (!PLANS[plan]) return res.status(400).json({ error: 'Plan invalide' });
+    const user = await User.findById(req.params.id);
+    if (!user) return res.status(404).json({ error: 'Utilisateur introuvable' });
+    if (ADMIN_EMAILS.includes(user.email) && plan !== 'admin')
+      return res.status(403).json({ error: 'Impossible de rétrograder un admin désigné' });
+    user.plan = plan;
+    await user.save();
+    if (plan === 'free') {
+      await Video.updateMany({ userId: user._id, expiresAt: null }, { expiresAt: expiresAtForPlan('free') });
+    } else {
+      await Video.updateMany({ userId: user._id }, { expiresAt: null });
+    }
+    res.json({ ok: true });
+  } catch (e) {
+    console.error('[ADMIN SET PLAN]', e.message);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+app.delete('/api/admin/users/:id', requireAdmin, async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id);
+    if (!user) return res.status(404).json({ error: 'Utilisateur introuvable' });
+    if (ADMIN_EMAILS.includes(user.email))
+      return res.status(403).json({ error: 'Impossible de supprimer un admin désigné' });
+    const videos = await Video.find({ userId: user._id });
+    for (const v of videos) {
+      const reactions = await Reaction.find({ videoId: v._id });
+      for (const r of reactions) await cloudinary.uploader.destroy(r.cloudinaryId, { resource_type: 'video' }).catch(() => {});
+      await Reaction.deleteMany({ videoId: v._id });
+      await cloudinary.uploader.destroy(v.cloudinaryId, { resource_type: 'video' }).catch(() => {});
+    }
+    await Video.deleteMany({ userId: user._id });
+    await User.deleteOne({ _id: user._id });
+    res.json({ ok: true });
+  } catch (e) {
+    console.error('[ADMIN DELETE USER]', e.message);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+app.get('/api/admin/videos', requireAdmin, async (req, res) => {
+  try {
+    const { search = '', page = 1, limit = 25 } = req.query;
+    const query = search ? { originalName: new RegExp(search, 'i') } : {};
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+    const [videos, total] = await Promise.all([
+      Video.find(query).sort({ createdAt: -1 }).skip(skip).limit(parseInt(limit)),
+      Video.countDocuments(query),
+    ]);
+    const enriched = await Promise.all(videos.map(async v => {
+      const [owner, reactionCount] = await Promise.all([
+        User.findById(v.userId).select('email name plan').catch(() => null),
+        Reaction.countDocuments({ videoId: v._id }),
+      ]);
+      return { ...v.toObject(), owner, reactionCount };
+    }));
+    res.json({ videos: enriched, total, page: parseInt(page), pages: Math.ceil(total / parseInt(limit)) });
+  } catch (e) {
+    console.error('[ADMIN VIDEOS]', e.message);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+app.delete('/api/admin/videos/:id', requireAdmin, async (req, res) => {
+  try {
+    const video = await Video.findById(req.params.id);
+    if (!video) return res.status(404).json({ error: 'Vidéo introuvable' });
+    const reactions = await Reaction.find({ videoId: video._id });
+    for (const r of reactions) await cloudinary.uploader.destroy(r.cloudinaryId, { resource_type: 'video' }).catch(() => {});
+    await Reaction.deleteMany({ videoId: video._id });
+    await cloudinary.uploader.destroy(video.cloudinaryId, { resource_type: 'video' }).catch(() => {});
+    await Video.deleteOne({ _id: video._id });
+    res.json({ ok: true });
+  } catch (e) {
+    console.error('[ADMIN DELETE VIDEO]', e.message);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+app.get('/api/admin/reactions', requireAdmin, async (req, res) => {
+  try {
+    const { page = 1, limit = 25 } = req.query;
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+    const [reactions, total] = await Promise.all([
+      Reaction.find().sort({ createdAt: -1 }).skip(skip).limit(parseInt(limit)),
+      Reaction.countDocuments(),
+    ]);
+    const enriched = await Promise.all(reactions.map(async r => {
+      const video = await Video.findById(r.videoId).select('originalName userId').catch(() => null);
+      return { ...r.toObject(), video };
+    }));
+    res.json({ reactions: enriched, total, page: parseInt(page), pages: Math.ceil(total / parseInt(limit)) });
+  } catch (e) {
+    console.error('[ADMIN REACTIONS]', e.message);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+app.delete('/api/admin/reactions/:id', requireAdmin, async (req, res) => {
+  try {
+    const reaction = await Reaction.findById(req.params.id);
+    if (!reaction) return res.status(404).json({ error: 'Réaction introuvable' });
+    await cloudinary.uploader.destroy(reaction.cloudinaryId, { resource_type: 'video' }).catch(() => {});
+    await Reaction.deleteOne({ _id: reaction._id });
+    res.json({ ok: true });
+  } catch (e) {
+    console.error('[ADMIN DELETE REACTION]', e.message);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
 // PAGES
 // ═══════════════════════════════════════════════════════════════════════════════
+app.get('/admin',      requireAdminPage, (req, res) => res.sendFile(path.join(__dirname, 'public', 'admin.html')));
 app.get('/watch/:id',  (req, res) => res.sendFile(path.join(__dirname, 'public', 'watch.html')));
 app.get('/dashboard',  (req, res) => res.sendFile(path.join(__dirname, 'public', 'dashboard.html')));
 app.get('/login',      (req, res) => res.sendFile(path.join(__dirname, 'public', 'login.html')));
@@ -702,11 +930,15 @@ cron.schedule('0 3 * * *', () => {
   deleteExpiredVideos().catch(e => console.error('Cron erreur :', e.message));
 });
 
-// Route admin pour déclencher manuellement
+// Route admin pour déclencher manuellement (clé header OU session admin)
 app.post('/api/admin/cleanup', async (req, res) => {
-  if (req.headers['x-admin-key'] !== process.env.ADMIN_KEY) {
-    return res.status(403).json({ error: 'Forbidden' });
+  const headerOk = process.env.ADMIN_KEY && req.headers['x-admin-key'] === process.env.ADMIN_KEY;
+  let sessionOk = false;
+  if (req.session.userId) {
+    const u = await User.findById(req.session.userId).select('email plan').catch(() => null);
+    sessionOk = u && (u.plan === 'admin' || ADMIN_EMAILS.includes(u.email));
   }
+  if (!headerOk && !sessionOk) return res.status(403).json({ error: 'Forbidden' });
   try {
     await deleteExpiredVideos();
     res.json({ ok: true });

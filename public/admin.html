@@ -1,0 +1,923 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Administration — ReactionCam</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0a0a0a;
+    --surface: #111111;
+    --surface2: #161616;
+    --border: #1e1e1e;
+    --border2: #2a2a2a;
+    --gold: #c9a84c;
+    --gold-dim: #7a6330;
+    --text: #e8e0d0;
+    --muted: #a09080;
+    --muted2: #5a5245;
+    --red: #c0392b;
+    --green: #27ae60;
+    --blue: #2980b9;
+    --purple: #8e44ad;
+    --radius: 3px;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Courier New', monospace;
+    font-size: 13px;
+    min-height: 100vh;
+  }
+
+  /* ── Header ── */
+  .header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 0 24px;
+    height: 52px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .header-logo { color: var(--gold); font-size: 16px; letter-spacing: .12em; flex-shrink: 0; }
+  .header-logo em { font-style: italic; }
+  .header-badge {
+    background: var(--gold); color: #0a0a0a;
+    font-size: 9px; letter-spacing: .15em; text-transform: uppercase;
+    padding: 2px 7px; border-radius: 2px;
+  }
+  .header-spacer { flex: 1; }
+  .header-user { color: var(--muted); font-size: 11px; }
+  .header-logout {
+    background: none; border: 1px solid var(--border2); color: var(--muted);
+    padding: 5px 12px; border-radius: var(--radius); cursor: pointer; font-family: inherit; font-size: 11px;
+    letter-spacing: .06em;
+  }
+  .header-logout:hover { border-color: var(--muted2); color: var(--text); }
+
+  /* ── Layout ── */
+  .layout { display: flex; min-height: calc(100vh - 52px); }
+
+  /* ── Sidebar ── */
+  .sidebar {
+    width: 200px;
+    flex-shrink: 0;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    padding: 20px 0;
+  }
+  .nav-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 20px; cursor: pointer; color: var(--muted);
+    font-size: 12px; letter-spacing: .06em; border: none; background: none;
+    width: 100%; text-align: left; font-family: inherit;
+    border-left: 2px solid transparent;
+    transition: color .15s, border-color .15s;
+  }
+  .nav-item:hover { color: var(--text); }
+  .nav-item.active { color: var(--gold); border-left-color: var(--gold); }
+  .nav-item .icon { width: 16px; text-align: center; }
+  .nav-sep { height: 1px; background: var(--border); margin: 12px 20px; }
+  .nav-label { padding: 8px 20px 4px; font-size: 10px; letter-spacing: .12em; color: var(--muted2); text-transform: uppercase; }
+
+  /* ── Main ── */
+  .main { flex: 1; padding: 28px 32px; overflow: auto; }
+
+  /* ── Section title ── */
+  .section-title {
+    font-size: 11px; letter-spacing: .16em; text-transform: uppercase;
+    color: var(--muted); margin-bottom: 20px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .section-title::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+  /* ── Stat cards ── */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 14px;
+    margin-bottom: 28px;
+  }
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 18px 20px;
+  }
+  .stat-label { font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted2); margin-bottom: 10px; }
+  .stat-value { font-size: 28px; color: var(--text); line-height: 1; }
+  .stat-sub { font-size: 11px; color: var(--muted); margin-top: 6px; }
+  .stat-card.gold .stat-value { color: var(--gold); }
+  .stat-card.green .stat-value { color: var(--green); }
+  .stat-card.blue .stat-value { color: var(--blue); }
+  .stat-card.purple .stat-value { color: var(--purple); }
+
+  /* ── Plan pills ── */
+  .plan {
+    display: inline-block; font-size: 10px; letter-spacing: .1em; text-transform: uppercase;
+    padding: 2px 8px; border-radius: 2px;
+  }
+  .plan-free   { background: #1a1a1a; color: var(--muted); border: 1px solid var(--border2); }
+  .plan-pro    { background: #1a2a1a; color: var(--green); border: 1px solid #1a3a1a; }
+  .plan-admin  { background: #2a200a; color: var(--gold);  border: 1px solid #3a2a0a; }
+
+  /* ── Table ── */
+  .table-wrap {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+  .table-toolbar {
+    display: flex; align-items: center; gap: 10px;
+    padding: 12px 16px; border-bottom: 1px solid var(--border);
+    flex-wrap: wrap;
+  }
+  .table-toolbar h3 { font-size: 11px; letter-spacing: .1em; color: var(--muted); text-transform: uppercase; flex: 1; }
+  .search-input {
+    background: var(--surface2); border: 1px solid var(--border2); color: var(--text);
+    padding: 6px 10px; border-radius: var(--radius); font-family: inherit; font-size: 12px;
+    width: 200px;
+  }
+  .search-input::placeholder { color: var(--muted2); }
+  .search-input:focus { outline: none; border-color: var(--gold-dim); }
+  .filter-select {
+    background: var(--surface2); border: 1px solid var(--border2); color: var(--muted);
+    padding: 6px 8px; border-radius: var(--radius); font-family: inherit; font-size: 11px; cursor: pointer;
+  }
+  .filter-select:focus { outline: none; }
+
+  table { width: 100%; border-collapse: collapse; }
+  th {
+    font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted2);
+    text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+  }
+  td {
+    padding: 10px 14px; border-bottom: 1px solid var(--border);
+    color: var(--text); vertical-align: middle;
+  }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: var(--surface2); }
+  .truncate { max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .dim { color: var(--muted); }
+  .small { font-size: 11px; }
+
+  /* ── Actions ── */
+  .actions { display: flex; gap: 6px; align-items: center; }
+  .btn {
+    background: none; border: 1px solid var(--border2); color: var(--muted);
+    padding: 4px 10px; border-radius: var(--radius); cursor: pointer;
+    font-family: inherit; font-size: 11px; letter-spacing: .04em;
+    transition: all .15s;
+  }
+  .btn:hover { color: var(--text); border-color: var(--muted2); }
+  .btn-danger { color: #c0392b; border-color: #4a1a1a; }
+  .btn-danger:hover { background: #1a0808; border-color: #c0392b; color: #e74c3c; }
+  .btn-primary { color: var(--gold); border-color: var(--gold-dim); }
+  .btn-primary:hover { background: #1a1200; }
+  .btn-action {
+    background: var(--gold); color: #0a0a0a; border: none;
+    padding: 8px 18px; font-family: inherit; font-size: 11px; letter-spacing: .1em;
+    text-transform: uppercase; border-radius: var(--radius); cursor: pointer;
+  }
+  .btn-action:hover { background: #dbb85c; }
+  .btn-action:disabled { opacity: .5; cursor: not-allowed; }
+
+  /* ── Pagination ── */
+  .pagination {
+    display: flex; align-items: center; gap: 6px;
+    padding: 12px 16px; border-top: 1px solid var(--border);
+    font-size: 11px; color: var(--muted);
+  }
+  .pagination-info { flex: 1; }
+  .page-btn {
+    background: none; border: 1px solid var(--border2); color: var(--muted);
+    padding: 3px 10px; border-radius: var(--radius); cursor: pointer;
+    font-family: inherit; font-size: 11px;
+  }
+  .page-btn:hover:not(:disabled) { border-color: var(--muted2); color: var(--text); }
+  .page-btn:disabled { opacity: .35; cursor: not-allowed; }
+  .page-btn.active { border-color: var(--gold-dim); color: var(--gold); }
+
+  /* ── Chart ── */
+  .chart-wrap {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+    margin-bottom: 28px;
+  }
+  .chart-title { font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted2); margin-bottom: 16px; }
+  .chart-canvas { width: 100%; height: 120px; }
+
+  /* ── Quick actions ── */
+  .quick-actions {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+    margin-bottom: 28px;
+  }
+  .quick-actions h3 { font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted2); margin-bottom: 14px; }
+  .quick-row { display: flex; gap: 10px; flex-wrap: wrap; }
+  .quick-item {
+    display: flex; align-items: center; gap: 10px;
+    background: var(--surface2); border: 1px solid var(--border2);
+    padding: 10px 14px; border-radius: var(--radius);
+  }
+  .quick-desc { font-size: 11px; color: var(--muted); }
+
+  /* ── Toast ── */
+  #toast {
+    position: fixed; bottom: 24px; right: 24px;
+    background: var(--surface); border: 1px solid var(--border);
+    padding: 10px 18px; border-radius: var(--radius);
+    font-size: 12px; color: var(--text);
+    opacity: 0; transition: opacity .2s;
+    pointer-events: none; z-index: 9999;
+  }
+  #toast.show { opacity: 1; }
+  #toast.ok   { border-color: var(--green); color: var(--green); }
+  #toast.err  { border-color: var(--red);   color: #e74c3c; }
+
+  /* ── Modal ── */
+  .modal-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,.7); z-index: 500;
+    align-items: center; justify-content: center;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: var(--surface); border: 1px solid var(--border2);
+    border-radius: var(--radius); padding: 28px 32px; max-width: 400px; width: 90%;
+  }
+  .modal h3 { font-size: 14px; margin-bottom: 10px; color: var(--text); }
+  .modal p  { font-size: 12px; color: var(--muted); margin-bottom: 20px; line-height: 1.6; }
+  .modal-actions { display: flex; gap: 10px; justify-content: flex-end; }
+
+  /* ── Plan selector ── */
+  .plan-select {
+    background: var(--surface2); border: 1px solid var(--border2); color: var(--text);
+    padding: 5px 8px; border-radius: var(--radius); font-family: inherit; font-size: 12px; cursor: pointer;
+  }
+  .plan-select:focus { outline: none; border-color: var(--gold-dim); }
+
+  /* ── Section hidden ── */
+  .section { display: none; }
+  .section.active { display: block; }
+
+  /* ── Scrollable table ── */
+  .table-scroll { overflow-x: auto; }
+
+  /* ── Status dot ── */
+  .dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; }
+  .dot-green  { background: var(--green); }
+  .dot-red    { background: var(--red); }
+  .dot-yellow { background: var(--gold); }
+
+  /* ── Video thumbnail ── */
+  .video-link {
+    color: var(--gold); text-decoration: none; font-size: 11px;
+  }
+  .video-link:hover { text-decoration: underline; }
+
+  @media (max-width: 700px) {
+    .sidebar { display: none; }
+    .main { padding: 16px; }
+    .stats-grid { grid-template-columns: 1fr 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<header class="header">
+  <span class="header-logo">Reaction<em>Cam</em></span>
+  <span class="header-badge">Admin</span>
+  <span class="header-spacer"></span>
+  <span class="header-user" id="headerUser"></span>
+  <button class="header-logout" onclick="logout()">Déconnexion</button>
+</header>
+
+<div class="layout">
+  <!-- Sidebar -->
+  <nav class="sidebar">
+    <span class="nav-label">Tableau de bord</span>
+    <button class="nav-item active" onclick="showSection('overview', this)">
+      <span class="icon">◈</span> Vue d'ensemble
+    </button>
+    <div class="nav-sep"></div>
+    <span class="nav-label">Données</span>
+    <button class="nav-item" onclick="showSection('users', this)">
+      <span class="icon">◎</span> Utilisateurs
+    </button>
+    <button class="nav-item" onclick="showSection('videos', this)">
+      <span class="icon">▶</span> Vidéos
+    </button>
+    <button class="nav-item" onclick="showSection('reactions', this)">
+      <span class="icon">◉</span> Réactions
+    </button>
+    <div class="nav-sep"></div>
+    <span class="nav-label">Outils</span>
+    <button class="nav-item" onclick="showSection('actions', this)">
+      <span class="icon">⚙</span> Actions
+    </button>
+    <div class="nav-sep"></div>
+    <button class="nav-item" onclick="window.location='/dashboard'">
+      <span class="icon">←</span> Mon dashboard
+    </button>
+  </nav>
+
+  <!-- Main content -->
+  <main class="main">
+
+    <!-- ── OVERVIEW ── -->
+    <section id="section-overview" class="section active">
+      <div class="section-title">Vue d'ensemble</div>
+
+      <div class="stats-grid" id="statsGrid">
+        <div class="stat-card gold">
+          <div class="stat-label">Utilisateurs</div>
+          <div class="stat-value" id="statUsers">—</div>
+          <div class="stat-sub" id="statUsersSub"></div>
+        </div>
+        <div class="stat-card green">
+          <div class="stat-label">Vidéos</div>
+          <div class="stat-value" id="statVideos">—</div>
+          <div class="stat-sub" id="statVideosSub"></div>
+        </div>
+        <div class="stat-card blue">
+          <div class="stat-label">Réactions</div>
+          <div class="stat-value" id="statReactions">—</div>
+          <div class="stat-sub" id="statReactionsSub"></div>
+        </div>
+        <div class="stat-card purple">
+          <div class="stat-label">Stockage</div>
+          <div class="stat-value" id="statStorage">—</div>
+          <div class="stat-sub">Cloudinary (estimé)</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Plan Free</div>
+          <div class="stat-value" id="statFree">—</div>
+          <div class="stat-sub">utilisateurs gratuits</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Plan Pro</div>
+          <div class="stat-value" id="statPro">—</div>
+          <div class="stat-sub">abonnés actifs</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Expirent bientôt</div>
+          <div class="stat-value" id="statExpiring">—</div>
+          <div class="stat-sub">vidéos — 7 jours</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Cette semaine</div>
+          <div class="stat-value" id="statWeekUsers">—</div>
+          <div class="stat-sub" id="statWeekSub"></div>
+        </div>
+      </div>
+
+      <div class="chart-wrap">
+        <div class="chart-title">Activité — 14 derniers jours</div>
+        <canvas id="activityChart" class="chart-canvas"></canvas>
+      </div>
+    </section>
+
+    <!-- ── USERS ── -->
+    <section id="section-users" class="section">
+      <div class="section-title">Utilisateurs</div>
+      <div class="table-wrap">
+        <div class="table-toolbar">
+          <h3>Comptes</h3>
+          <input class="search-input" id="usersSearch" placeholder="Recherche email / nom…" oninput="debounce(loadUsers)">
+          <select class="filter-select" id="usersPlanFilter" onchange="loadUsers()">
+            <option value="">Tous les plans</option>
+            <option value="free">Free</option>
+            <option value="pro">Pro</option>
+            <option value="admin">Admin</option>
+          </select>
+        </div>
+        <div class="table-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th>Email</th>
+                <th>Nom</th>
+                <th>Plan</th>
+                <th>Vidéos</th>
+                <th>Email vérifié</th>
+                <th>Inscription</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="usersBody"><tr><td colspan="7" class="dim" style="padding:20px;text-align:center">Chargement…</td></tr></tbody>
+          </table>
+        </div>
+        <div class="pagination" id="usersPagination"></div>
+      </div>
+    </section>
+
+    <!-- ── VIDEOS ── -->
+    <section id="section-videos" class="section">
+      <div class="section-title">Vidéos</div>
+      <div class="table-wrap">
+        <div class="table-toolbar">
+          <h3>Toutes les vidéos</h3>
+          <input class="search-input" id="videosSearch" placeholder="Recherche nom…" oninput="debounce(loadVideos)">
+        </div>
+        <div class="table-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th>Nom fichier</th>
+                <th>Propriétaire</th>
+                <th>Plan</th>
+                <th>Taille</th>
+                <th>Réactions</th>
+                <th>Expiration</th>
+                <th>Upload</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="videosBody"><tr><td colspan="8" class="dim" style="padding:20px;text-align:center">Chargement…</td></tr></tbody>
+          </table>
+        </div>
+        <div class="pagination" id="videosPagination"></div>
+      </div>
+    </section>
+
+    <!-- ── REACTIONS ── -->
+    <section id="section-reactions" class="section">
+      <div class="section-title">Réactions</div>
+      <div class="table-wrap">
+        <div class="table-toolbar">
+          <h3>Toutes les réactions</h3>
+        </div>
+        <div class="table-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th>Spectateur</th>
+                <th>Vidéo associée</th>
+                <th>Date</th>
+                <th>Aperçu</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="reactionsBody"><tr><td colspan="5" class="dim" style="padding:20px;text-align:center">Chargement…</td></tr></tbody>
+          </table>
+        </div>
+        <div class="pagination" id="reactionsPagination"></div>
+      </div>
+    </section>
+
+    <!-- ── ACTIONS ── -->
+    <section id="section-actions" class="section">
+      <div class="section-title">Actions système</div>
+
+      <div class="quick-actions">
+        <h3>Maintenance</h3>
+        <div class="quick-row">
+          <div class="quick-item">
+            <div>
+              <div style="font-size:12px;margin-bottom:4px;">Nettoyage vidéos expirées</div>
+              <div class="quick-desc">Supprime les vidéos dont la date d'expiration est passée sur Cloudinary et en base.</div>
+            </div>
+            <button class="btn-action" id="btnCleanup" onclick="triggerCleanup()">Lancer</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="quick-actions">
+        <h3>Informations système</h3>
+        <div id="sysInfo" style="font-size:12px;color:var(--muted);line-height:2;">Chargement…</div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<!-- Toast -->
+<div id="toast"></div>
+
+<!-- Confirm modal -->
+<div class="modal-overlay" id="confirmModal">
+  <div class="modal">
+    <h3 id="modalTitle">Confirmer</h3>
+    <p id="modalBody"></p>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal()">Annuler</button>
+      <button class="btn btn-danger" id="modalConfirm">Confirmer</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── State ──────────────────────────────────────────────────────────────────────
+const state = {
+  users:     { page: 1, pages: 1 },
+  videos:    { page: 1, pages: 1 },
+  reactions: { page: 1, pages: 1 },
+};
+let debounceTimer = null;
+
+// ── Init ───────────────────────────────────────────────────────────────────────
+(async () => {
+  const me = await api('/api/auth/me').catch(() => null);
+  if (!me || me.plan !== 'admin') {
+    window.location = '/dashboard';
+    return;
+  }
+  document.getElementById('headerUser').textContent = me.email;
+  loadStats();
+})();
+
+// ── API helper ─────────────────────────────────────────────────────────────────
+async function api(url, opts = {}) {
+  const res = await fetch(url, { credentials: 'include', ...opts,
+    headers: { 'Content-Type': 'application/json', ...(opts.headers || {}) }
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || res.statusText);
+  return data;
+}
+
+// ── Navigation ─────────────────────────────────────────────────────────────────
+function showSection(name, btn) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+  document.getElementById('section-' + name).classList.add('active');
+  btn.classList.add('active');
+
+  if (name === 'users')     loadUsers();
+  if (name === 'videos')    loadVideos();
+  if (name === 'reactions') loadReactions();
+  if (name === 'actions')   loadSysInfo();
+}
+
+function debounce(fn) {
+  clearTimeout(debounceTimer);
+  debounceTimer = setTimeout(fn, 350);
+}
+
+// ── STATS ──────────────────────────────────────────────────────────────────────
+async function loadStats() {
+  try {
+    const d = await api('/api/admin/stats');
+
+    document.getElementById('statUsers').textContent     = d.users.total;
+    document.getElementById('statUsersSub').textContent  = `+${d.users.week} cette semaine`;
+    document.getElementById('statVideos').textContent    = d.videos.total;
+    document.getElementById('statVideosSub').textContent = `+${d.videos.week} cette semaine`;
+    document.getElementById('statReactions').textContent = d.reactions.total;
+    document.getElementById('statReactionsSub').textContent = `+${d.reactions.week} cette semaine`;
+    document.getElementById('statStorage').textContent   = fmtBytes(d.storage.bytes);
+    document.getElementById('statFree').textContent      = d.users.free;
+    document.getElementById('statPro').textContent       = d.users.pro;
+    document.getElementById('statExpiring').textContent  = d.videos.expiringSoon;
+    document.getElementById('statWeekUsers').textContent = d.users.week;
+    document.getElementById('statWeekSub').textContent   = `inscrits · ${d.reactions.week} réactions`;
+
+    drawChart(d.chart);
+  } catch (e) {
+    toast('Erreur chargement stats : ' + e.message, 'err');
+  }
+}
+
+// ── CHART ──────────────────────────────────────────────────────────────────────
+function drawChart(days) {
+  const canvas = document.getElementById('activityChart');
+  const ctx = canvas.getContext('2d');
+  const dpr = window.devicePixelRatio || 1;
+  const W = canvas.parentElement.clientWidth - 40;
+  const H = 120;
+  canvas.width  = W * dpr;
+  canvas.height = H * dpr;
+  canvas.style.width  = W + 'px';
+  canvas.style.height = H + 'px';
+  ctx.scale(dpr, dpr);
+
+  const maxV = Math.max(...days.map(d => d.videos), 1);
+  const maxR = Math.max(...days.map(d => d.reactions), 1);
+  const max  = Math.max(maxV, maxR, 1);
+  const pad  = { t: 8, r: 8, b: 28, l: 30 };
+  const cW   = W - pad.l - pad.r;
+  const cH   = H - pad.t - pad.b;
+  const step = cW / (days.length - 1);
+
+  ctx.clearRect(0, 0, W, H);
+
+  // Grid
+  ctx.strokeStyle = '#1e1e1e';
+  ctx.lineWidth = 1;
+  for (let i = 0; i <= 4; i++) {
+    const y = pad.t + (cH / 4) * i;
+    ctx.beginPath(); ctx.moveTo(pad.l, y); ctx.lineTo(pad.l + cW, y); ctx.stroke();
+  }
+
+  const drawLine = (key, color) => {
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    days.forEach((d, i) => {
+      const x = pad.l + i * step;
+      const y = pad.t + cH - (d[key] / max) * cH;
+      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    });
+    ctx.stroke();
+    // Dots
+    ctx.fillStyle = color;
+    days.forEach((d, i) => {
+      const x = pad.l + i * step;
+      const y = pad.t + cH - (d[key] / max) * cH;
+      ctx.beginPath(); ctx.arc(x, y, 2.5, 0, Math.PI * 2); ctx.fill();
+    });
+  };
+
+  drawLine('videos', '#2980b9');
+  drawLine('reactions', '#8e44ad');
+  drawLine('users', '#c9a84c');
+
+  // X labels (every 2 days)
+  ctx.fillStyle = '#5a5245';
+  ctx.font = '9px Courier New';
+  ctx.textAlign = 'center';
+  days.forEach((d, i) => {
+    if (i % 2 === 0) {
+      const x = pad.l + i * step;
+      ctx.fillText(d.date.slice(5), x, H - 6);
+    }
+  });
+
+  // Legend
+  const legend = [['Vidéos', '#2980b9'], ['Réactions', '#8e44ad'], ['Utilisateurs', '#c9a84c']];
+  let lx = pad.l;
+  ctx.font = '9px Courier New';
+  legend.forEach(([label, color]) => {
+    ctx.fillStyle = color;
+    ctx.fillRect(lx, 2, 10, 6);
+    ctx.fillStyle = '#a09080';
+    ctx.textAlign = 'left';
+    ctx.fillText(label, lx + 13, 9);
+    lx += 80;
+  });
+}
+
+// ── USERS ──────────────────────────────────────────────────────────────────────
+async function loadUsers() {
+  const search = document.getElementById('usersSearch').value;
+  const plan   = document.getElementById('usersPlanFilter').value;
+  const page   = state.users.page;
+  try {
+    const d = await api(`/api/admin/users?search=${encodeURIComponent(search)}&plan=${plan}&page=${page}&limit=25`);
+    state.users.pages = d.pages;
+    const tbody = document.getElementById('usersBody');
+    if (!d.users.length) {
+      tbody.innerHTML = '<tr><td colspan="7" class="dim" style="padding:20px;text-align:center">Aucun utilisateur trouvé</td></tr>';
+    } else {
+      tbody.innerHTML = d.users.map(u => `
+        <tr>
+          <td class="truncate small">${esc(u.email)}</td>
+          <td class="small">${esc(u.name)}</td>
+          <td>
+            <select class="plan-select" onchange="setPlan('${u._id}', this.value, this)">
+              <option value="free"  ${u.plan==='free' ?'selected':''}>Free</option>
+              <option value="pro"   ${u.plan==='pro'  ?'selected':''}>Pro</option>
+              <option value="admin" ${u.plan==='admin'?'selected':''}>Admin</option>
+            </select>
+          </td>
+          <td class="dim small">${u.videoCount}</td>
+          <td><span class="dot ${u.emailVerified?'dot-green':'dot-red'}"></span></td>
+          <td class="dim small">${fmtDate(u.createdAt)}</td>
+          <td>
+            <div class="actions">
+              <button class="btn btn-danger" onclick="confirmDelete('user','${u._id}','${esc(u.email)}')">Supprimer</button>
+            </div>
+          </td>
+        </tr>
+      `).join('');
+    }
+    renderPagination('usersPagination', state.users, loadUsers);
+  } catch (e) {
+    toast('Erreur : ' + e.message, 'err');
+  }
+}
+
+async function setPlan(userId, plan, selectEl) {
+  try {
+    await api(`/api/admin/users/${userId}/plan`, { method: 'PATCH', body: JSON.stringify({ plan }) });
+    toast('Plan mis à jour', 'ok');
+    // Update the displayed badge next to the select
+    const td = selectEl.closest('td');
+    loadUsers();
+  } catch (e) {
+    toast('Erreur : ' + e.message, 'err');
+    loadUsers();
+  }
+}
+
+// ── VIDEOS ──────────────────────────────────────────────────────────────────────
+async function loadVideos() {
+  const search = document.getElementById('videosSearch').value;
+  const page   = state.videos.page;
+  try {
+    const d = await api(`/api/admin/videos?search=${encodeURIComponent(search)}&page=${page}&limit=25`);
+    state.videos.pages = d.pages;
+    const tbody = document.getElementById('videosBody');
+    if (!d.videos.length) {
+      tbody.innerHTML = '<tr><td colspan="8" class="dim" style="padding:20px;text-align:center">Aucune vidéo</td></tr>';
+    } else {
+      tbody.innerHTML = d.videos.map(v => `
+        <tr>
+          <td class="truncate small">
+            <a class="video-link" href="/watch/${v._id}" target="_blank">${esc(v.originalName || v._id)}</a>
+          </td>
+          <td class="small dim truncate">${v.owner ? esc(v.owner.email) : '—'}</td>
+          <td>${planBadge(v.owner?.plan || 'free')}</td>
+          <td class="dim small">${fmtBytes(v.size || 0)}</td>
+          <td class="dim small">${v.reactionCount}</td>
+          <td class="small ${v.expiresAt ? 'dim' : ''}">${v.expiresAt ? fmtDate(v.expiresAt) : '∞ Permanent'}</td>
+          <td class="dim small">${fmtDate(v.createdAt)}</td>
+          <td>
+            <div class="actions">
+              <button class="btn btn-danger" onclick="confirmDelete('video','${v._id}','${esc(v.originalName || v._id)}')">Supprimer</button>
+            </div>
+          </td>
+        </tr>
+      `).join('');
+    }
+    renderPagination('videosPagination', state.videos, loadVideos);
+  } catch (e) {
+    toast('Erreur : ' + e.message, 'err');
+  }
+}
+
+// ── REACTIONS ──────────────────────────────────────────────────────────────────
+async function loadReactions() {
+  const page = state.reactions.page;
+  try {
+    const d = await api(`/api/admin/reactions?page=${page}&limit=25`);
+    state.reactions.pages = d.pages;
+    const tbody = document.getElementById('reactionsBody');
+    if (!d.reactions.length) {
+      tbody.innerHTML = '<tr><td colspan="5" class="dim" style="padding:20px;text-align:center">Aucune réaction</td></tr>';
+    } else {
+      tbody.innerHTML = d.reactions.map(r => `
+        <tr>
+          <td class="small">${esc(r.viewerName || 'Anonyme')}</td>
+          <td class="small dim truncate">${r.video ? esc(r.video.originalName || r.video._id) : '—'}</td>
+          <td class="dim small">${fmtDate(r.createdAt)}</td>
+          <td>
+            <a class="video-link" href="${esc(r.url)}" target="_blank">Voir ↗</a>
+          </td>
+          <td>
+            <div class="actions">
+              <button class="btn btn-danger" onclick="confirmDelete('reaction','${r._id}','${esc(r.viewerName || 'Anonyme')}')">Supprimer</button>
+            </div>
+          </td>
+        </tr>
+      `).join('');
+    }
+    renderPagination('reactionsPagination', state.reactions, loadReactions);
+  } catch (e) {
+    toast('Erreur : ' + e.message, 'err');
+  }
+}
+
+// ── PAGINATION ─────────────────────────────────────────────────────────────────
+function renderPagination(id, st, loadFn) {
+  const el = document.getElementById(id);
+  if (st.pages <= 1) { el.innerHTML = ''; return; }
+  let html = `<span class="pagination-info">Page ${st.page} / ${st.pages}</span>`;
+  html += `<button class="page-btn" ${st.page<=1?'disabled':''} onclick="gotoPage('${id}',${st.page-1})">←</button>`;
+  const start = Math.max(1, st.page - 2), end = Math.min(st.pages, start + 4);
+  for (let i = start; i <= end; i++) {
+    html += `<button class="page-btn ${i===st.page?'active':''}" onclick="gotoPage('${id}',${i})">${i}</button>`;
+  }
+  html += `<button class="page-btn" ${st.page>=st.pages?'disabled':''} onclick="gotoPage('${id}',${st.page+1})">→</button>`;
+  el.innerHTML = html;
+}
+
+function gotoPage(id, page) {
+  if (id === 'usersPagination')     { state.users.page = page;     loadUsers(); }
+  if (id === 'videosPagination')    { state.videos.page = page;    loadVideos(); }
+  if (id === 'reactionsPagination') { state.reactions.page = page; loadReactions(); }
+}
+
+// ── ACTIONS ────────────────────────────────────────────────────────────────────
+async function loadSysInfo() {
+  try {
+    const d = await api('/api/admin/stats');
+    document.getElementById('sysInfo').innerHTML = `
+      <div>Utilisateurs total : <strong style="color:var(--text)">${d.users.total}</strong></div>
+      <div>Vidéos total : <strong style="color:var(--text)">${d.videos.total}</strong></div>
+      <div>Réactions total : <strong style="color:var(--text)">${d.reactions.total}</strong></div>
+      <div>Stockage estimé : <strong style="color:var(--text)">${fmtBytes(d.storage.bytes)}</strong></div>
+      <div>Vidéos expirant dans 7 jours : <strong style="color:var(--gold)">${d.videos.expiringSoon}</strong></div>
+    `;
+  } catch (e) {
+    document.getElementById('sysInfo').textContent = 'Erreur : ' + e.message;
+  }
+}
+
+async function triggerCleanup() {
+  const btn = document.getElementById('btnCleanup');
+  btn.disabled = true;
+  btn.textContent = 'En cours…';
+  try {
+    await api('/api/admin/cleanup', { method: 'POST' });
+    toast('Nettoyage terminé', 'ok');
+    loadStats();
+  } catch (e) {
+    toast('Erreur : ' + e.message, 'err');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Lancer';
+  }
+}
+
+// ── DELETE CONFIRM ─────────────────────────────────────────────────────────────
+let pendingDelete = null;
+
+function confirmDelete(type, id, label) {
+  const labels = { user: 'cet utilisateur', video: 'cette vidéo', reaction: 'cette réaction' };
+  document.getElementById('modalTitle').textContent = 'Supprimer ' + labels[type];
+  document.getElementById('modalBody').innerHTML =
+    `Es-tu sûr de vouloir supprimer <strong style="color:var(--text)">${esc(label)}</strong> ?<br>
+     <span style="color:#c0392b">Cette action est irréversible et supprime aussi les fichiers Cloudinary.</span>`;
+  document.getElementById('modalConfirm').onclick = () => doDelete(type, id);
+  document.getElementById('confirmModal').classList.add('open');
+}
+
+function closeModal() {
+  document.getElementById('confirmModal').classList.remove('open');
+}
+
+async function doDelete(type, id) {
+  closeModal();
+  const urls = { user: `/api/admin/users/${id}`, video: `/api/admin/videos/${id}`, reaction: `/api/admin/reactions/${id}` };
+  try {
+    await api(urls[type], { method: 'DELETE' });
+    toast('Supprimé', 'ok');
+    if (type === 'user')     loadUsers();
+    if (type === 'video')    loadVideos();
+    if (type === 'reaction') loadReactions();
+    loadStats();
+  } catch (e) {
+    toast('Erreur : ' + e.message, 'err');
+  }
+}
+
+// ── HELPERS ────────────────────────────────────────────────────────────────────
+function fmtDate(d) {
+  if (!d) return '—';
+  return new Date(d).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' });
+}
+
+function fmtBytes(b) {
+  if (!b) return '0 o';
+  if (b < 1024) return b + ' o';
+  if (b < 1024 * 1024) return (b / 1024).toFixed(1) + ' Ko';
+  if (b < 1024 ** 3)   return (b / 1024 / 1024).toFixed(1) + ' Mo';
+  return (b / 1024 ** 3).toFixed(2) + ' Go';
+}
+
+function esc(s) {
+  if (!s) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function planBadge(plan) {
+  return `<span class="plan plan-${plan}">${plan}</span>`;
+}
+
+let toastTimer;
+function toast(msg, type = '') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'show' + (type ? ' ' + type : '');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.className = '', 3000);
+}
+
+async function logout() {
+  await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
+  window.location = '/login';
+}
+
+// Close modal on overlay click
+document.getElementById('confirmModal').addEventListener('click', e => {
+  if (e.target === e.currentTarget) closeModal();
+});
+</script>
+</body>
+</html>
