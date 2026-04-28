@@ -32,3 +32,9 @@
 [data-theme="light"] .name-field input { background: #f0ebe0 !important; border-color: #ddd5c8 !important; }
 [data-theme="light"] .consent-list { background: #f5f1ea !important; border-color: #ddd5c8 !important; }
 [data-theme="light"] .plan-card.featured { background: #ede7da !important; }
+
+/* Titre SVG : invert + hue-rotate conserve le rouge et rend le texte noir */
+[data-theme="light"] .logo img[src="/titre.svg"],
+[data-theme="light"] .header-logo img[src="/titre.svg"] {
+  filter: invert(1) hue-rotate(180deg);
+}
