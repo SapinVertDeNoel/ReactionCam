@@ -21,12 +21,13 @@
   /* Nav */
   nav {
     display: flex; align-items: center; justify-content: space-between;
-    padding: 20px 48px; border-bottom: 1px solid var(--border);
+    height: 60px; padding: 0 48px; border-bottom: 1px solid var(--border);
     position: sticky; top: 0; background: rgba(10,10,10,0.95);
     backdrop-filter: blur(8px); z-index: 100;
   }
-  .logo { display: inline-flex; align-items: center; gap: 6px; text-decoration: none; }
-  img[src="/logo.svg"] { filter: invert(1); }
+  .logo { display: inline-flex; align-items: center; gap: 6px; text-decoration: none; align-self: stretch; }
+  .logo img[src="/titre.svg"] { height: 100%; width: auto; display: block; }
+  img[src="/logo.svg"] { filter: invert(1) hue-rotate(180deg); }
   .logo span { font-style: italic; }
   .nav-right { display: flex; align-items: center; gap: 12px; }
   .btn-nav { background: none; border: 1px solid var(--border); border-radius: var(--radius); padding: 8px 16px; color: var(--muted2); font-family: 'DM Mono', monospace; font-size: 11px; letter-spacing: 0.1em; cursor: pointer; text-decoration: none; transition: color 0.2s, border-color 0.2s; }
@@ -121,7 +122,7 @@
 <body>
 
 <nav>
-  <a class="logo" href="/"><img src="/logo.svg" alt="" height="32"><img src="/titre.svg" alt="ReactionCam" height="36"></a>
+  <a class="logo" href="/"><img src="/logo.svg" alt="" height="32"><img src="/titre.svg" alt="ReactionCam"></a>
   <div class="nav-right">
     <a class="btn-nav" href="/dashboard">← Mon espace</a>
   </div>
