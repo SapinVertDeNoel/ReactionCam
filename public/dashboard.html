@@ -37,6 +37,8 @@ nav {
 .user-name { font-size: 12px; color: var(--muted); letter-spacing: 0.06em; }
 .btn-logout { background: none; border: 1px solid var(--border); border-radius: 2px; padding: 8px 16px; color: var(--muted); font-family: 'DM Mono', monospace; font-size: 11px; letter-spacing: 0.1em; cursor: pointer; transition: color 0.2s, border-color 0.2s; }
 .btn-logout:hover { color: var(--text); border-color: var(--muted); }
+.btn-admin { background: none; border: 1px solid var(--gold-dim); border-radius: 2px; padding: 8px 16px; color: var(--gold); font-family: 'DM Mono', monospace; font-size: 11px; letter-spacing: 0.1em; text-decoration: none; transition: background 0.2s; }
+.btn-admin:hover { background: rgba(201,168,76,0.08); }
 .plan-badge { display: inline-block; padding: 3px 8px; border-radius: 2px; font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; }
 .plan-badge.free { border: 1px solid var(--border); color: var(--muted); }
 .plan-badge.pro  { border: 1px solid var(--gold-dim); color: var(--gold); background: rgba(201,168,76,0.06); }
@@ -206,6 +208,14 @@ async function init() {
   const badge = document.getElementById('planBadge');
   badge.textContent = me.planLabel;
   badge.className   = `plan-badge ${me.plan}`;
+
+  if (me.plan === 'admin') {
+    const adminLink = document.createElement('a');
+    adminLink.href = '/admin';
+    adminLink.className = 'btn-admin';
+    adminLink.textContent = 'Admin';
+    document.getElementById('planBadge').after(adminLink);
+  }
 
   if (new URLSearchParams(location.search).get('upgrade') === 'success') {
     showToast(window.__('dashboard.toast.pro'));

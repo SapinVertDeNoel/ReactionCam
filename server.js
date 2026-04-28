@@ -867,6 +867,24 @@ app.get('/api/admin/reactions', requireAdmin, async (req, res) => {
   }
 });
 
+app.get('/api/admin/users/:id', requireAdmin, async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id)
+      .select('-password -emailVerificationToken -emailVerificationExpires');
+    if (!user) return res.status(404).json({ error: 'Utilisateur introuvable' });
+    const videos = await Video.find({ userId: user._id }).sort({ createdAt: -1 });
+    const enrichedVideos = await Promise.all(videos.map(async v => {
+      const reactionCount = await Reaction.countDocuments({ videoId: v._id });
+      return { ...v.toObject(), reactionCount };
+    }));
+    const totalSize = videos.reduce((s, v) => s + (v.size || 0), 0);
+    res.json({ user: user.toObject(), videos: enrichedVideos, totalSize });
+  } catch (e) {
+    console.error('[ADMIN USER DETAIL]', e.message);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
 app.delete('/api/admin/reactions/:id', requireAdmin, async (req, res) => {
   try {
     const reaction = await Reaction.findById(req.params.id);
@@ -883,7 +901,8 @@ app.delete('/api/admin/reactions/:id', requireAdmin, async (req, res) => {
 // ═══════════════════════════════════════════════════════════════════════════════
 // PAGES
 // ═══════════════════════════════════════════════════════════════════════════════
-app.get('/admin',      requireAdminPage, (req, res) => res.sendFile(path.join(__dirname, 'public', 'admin.html')));
+app.get('/admin',           requireAdminPage, (req, res) => res.sendFile(path.join(__dirname, 'public', 'admin.html')));
+app.get('/admin/users/:id', requireAdminPage, (req, res) => res.sendFile(path.join(__dirname, 'public', 'admin-user.html')));
 app.get('/watch/:id',  (req, res) => res.sendFile(path.join(__dirname, 'public', 'watch.html')));
 app.get('/dashboard',  (req, res) => res.sendFile(path.join(__dirname, 'public', 'dashboard.html')));
 app.get('/login',      (req, res) => res.sendFile(path.join(__dirname, 'public', 'login.html')));

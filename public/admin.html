@@ -686,7 +686,9 @@ async function loadUsers() {
     } else {
       tbody.innerHTML = d.users.map(u => `
         <tr>
-          <td class="truncate small">${esc(u.email)}</td>
+          <td class="truncate small">
+            <a href="/admin/users/${u._id}" class="video-link">${esc(u.email)}</a>
+          </td>
           <td class="small">${esc(u.name)}</td>
           <td>
             <select class="plan-select" onchange="setPlan('${u._id}', this.value, this)">
