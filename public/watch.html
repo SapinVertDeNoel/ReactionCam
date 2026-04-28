@@ -48,12 +48,9 @@ html, body {
 
 /* ── Logo fixe ── */
 .logo {
-  position: fixed; top: 22px; left: 32px; z-index: 100;
-  font-family: 'Cormorant Garamond', serif; font-size: 18px;
-  font-weight: 300; letter-spacing: 0.12em;
-  color: var(--gold); text-decoration: none;
+  position: fixed; top: 16px; left: 24px; z-index: 100;
+  display: inline-flex; align-items: center; gap: 5px; text-decoration: none;
 }
-.logo span { font-style: italic; }
 
 /* ── Card commune ── */
 .card {
@@ -223,7 +220,7 @@ html, body {
 </head>
 <body>
 
-<a class="logo" href="/">Reaction<span>Cam</span></a>
+<a class="logo" href="/"><img src="/logo.svg" alt="" height="28"><img src="/titre.svg" alt="ReactionCam" height="28"></a>
 
 <!-- ═══ LOADING ═══ -->
 <div class="screen active" id="screenLoading">

@@ -46,8 +46,7 @@
     top: 0;
     z-index: 100;
   }
-  .header-logo { color: var(--gold); font-size: 16px; letter-spacing: .12em; flex-shrink: 0; }
-  .header-logo em { font-style: italic; }
+  .header-logo { display: inline-flex; align-items: center; gap: 5px; text-decoration: none; flex-shrink: 0; }
   .header-badge {
     background: var(--gold); color: #0a0a0a;
     font-size: 9px; letter-spacing: .15em; text-transform: uppercase;
@@ -300,7 +299,7 @@
 
 <!-- Header -->
 <header class="header">
-  <span class="header-logo">Reaction<em>Cam</em></span>
+  <span class="header-logo"><img src="/logo.svg" alt="" height="28"><img src="/titre.svg" alt="ReactionCam" height="28"></span>
   <span class="header-badge">Admin</span>
   <span class="header-spacer"></span>
   <span class="header-user" id="headerUser"></span>

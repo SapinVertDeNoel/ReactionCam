@@ -66,16 +66,7 @@
   header .tagline { position: absolute; left: 50%; transform: translateX(-50%); pointer-events: none; }
   header #rc-controls-mount { margin-left: auto; }
 
-  .logo {
-    font-family: 'Cormorant Garamond', serif;
-    font-size: 22px;
-    font-weight: 300;
-    letter-spacing: 0.12em;
-    color: var(--gold);
-    text-decoration: none;
-  }
-
-  .logo span { font-style: italic; }
+  .logo { display: inline-flex; align-items: center; gap: 6px; text-decoration: none; }
 
   .tagline {
     color: var(--muted);
@@ -416,7 +407,7 @@
 <body>
 
 <header>
-  <a class="logo" href="/">Reaction<span>Cam</span></a>
+  <a class="logo" href="/"><img src="/logo.svg" alt="" height="36"><img src="/titre.svg" alt="ReactionCam" height="36"></a>
   <span class="tagline" data-i18n="index.tagline">Capture les vraies réactions</span>
   <div id="rc-controls-mount"></div>
   <div id="authNav" style="display:flex;gap:12px;align-items:center;">

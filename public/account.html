@@ -25,7 +25,7 @@
     position: sticky; top: 0; background: rgba(10,10,10,0.95);
     backdrop-filter: blur(8px); z-index: 100;
   }
-  .logo { font-family: 'Cormorant Garamond', serif; font-size: 20px; font-weight: 300; letter-spacing: 0.12em; color: var(--gold); text-decoration: none; }
+  .logo { display: inline-flex; align-items: center; gap: 6px; text-decoration: none; }
   .logo span { font-style: italic; }
   .nav-right { display: flex; align-items: center; gap: 12px; }
   .btn-nav { background: none; border: 1px solid var(--border); border-radius: var(--radius); padding: 8px 16px; color: var(--muted2); font-family: 'DM Mono', monospace; font-size: 11px; letter-spacing: 0.1em; cursor: pointer; text-decoration: none; transition: color 0.2s, border-color 0.2s; }
@@ -120,7 +120,7 @@
 <body>
 
 <nav>
-  <a class="logo" href="/">Reaction<span>Cam</span></a>
+  <a class="logo" href="/"><img src="/logo.svg" alt="" height="32"><img src="/titre.svg" alt="ReactionCam" height="32"></a>
   <div class="nav-right">
     <a class="btn-nav" href="/dashboard">← Mon espace</a>
   </div>

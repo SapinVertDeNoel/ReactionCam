@@ -31,7 +31,7 @@ nav {
   position: sticky; top: 0; background: rgba(10,10,10,0.95);
   backdrop-filter: blur(8px); z-index: 100;
 }
-.logo { font-family: 'Cormorant Garamond', serif; font-size: 20px; font-weight: 300; letter-spacing: 0.12em; color: var(--gold); text-decoration: none; }
+.logo { display: inline-flex; align-items: center; gap: 6px; text-decoration: none; }
 .logo span { font-style: italic; }
 .nav-right { display: flex; align-items: center; gap: 12px; }
 .user-name { font-size: 12px; color: var(--muted); letter-spacing: 0.06em; text-decoration: none; cursor: pointer; }
@@ -153,7 +153,7 @@ main { flex: 1; padding: 48px; max-width: 1200px; width: 100%; margin: 0 auto; }
 <body>
 <div class="app">
   <nav>
-    <a class="logo" href="/">Reaction<span>Cam</span></a>
+    <a class="logo" href="/"><img src="/logo.svg" alt="" height="32"><img src="/titre.svg" alt="ReactionCam" height="32"></a>
     <div class="nav-right">
       <div id="rc-controls-mount"></div>
       <a class="user-name" href="/account" id="userName">…</a>
