@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
+<title>Mon compte — ReactionCam</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #0a0a0a; --surface: #111; --surface2: #141414; --border: #1e1e1e; --border2: #2a2a2a;
+    --gold: #c9a84c; --gold-dim: #7a6330;
+    --text: #e8e0d0; --muted: #5a5245; --muted2: #a09080; --red: #c0392b; --green: #4a7c59;
+    --radius: 3px;
+  }
+  html, body { min-height: 100vh; background: var(--bg); color: var(--text); font-family: 'DM Mono', monospace; font-size: 14px; }
+
+  /* Nav */
+  nav {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 20px 48px; border-bottom: 1px solid var(--border);
+    position: sticky; top: 0; background: rgba(10,10,10,0.95);
+    backdrop-filter: blur(8px); z-index: 100;
+  }
+  .logo { font-family: 'Cormorant Garamond', serif; font-size: 20px; font-weight: 300; letter-spacing: 0.12em; color: var(--gold); text-decoration: none; }
+  .logo span { font-style: italic; }
+  .nav-right { display: flex; align-items: center; gap: 12px; }
+  .btn-nav { background: none; border: 1px solid var(--border); border-radius: var(--radius); padding: 8px 16px; color: var(--muted2); font-family: 'DM Mono', monospace; font-size: 11px; letter-spacing: 0.1em; cursor: pointer; text-decoration: none; transition: color 0.2s, border-color 0.2s; }
+  .btn-nav:hover { color: var(--text); border-color: var(--muted2); }
+
+  /* Main */
+  main { max-width: 600px; margin: 0 auto; padding: 52px 24px; }
+
+  /* Page title */
+  .page-title { font-family: 'Cormorant Garamond', serif; font-size: 28px; font-weight: 300; letter-spacing: 0.08em; margin-bottom: 36px; }
+  .page-title em { font-style: italic; color: var(--gold); }
+
+  /* Card */
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 28px 32px; margin-bottom: 20px; }
+  .card-title { font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted2); margin-bottom: 20px; padding-bottom: 12px; border-bottom: 1px solid var(--border); }
+
+  /* User info */
+  .info-row { display: flex; align-items: center; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--border); }
+  .info-row:last-child { border-bottom: none; }
+  .info-label { font-size: 11px; color: var(--muted2); letter-spacing: 0.06em; }
+  .info-value { font-size: 12px; color: var(--text); }
+  .plan-pill { display: inline-block; padding: 2px 8px; border-radius: 2px; font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; }
+  .plan-pill.free  { border: 1px solid var(--border2); color: var(--muted2); }
+  .plan-pill.pro   { border: 1px solid var(--gold-dim); color: var(--gold); background: rgba(201,168,76,0.06); }
+  .plan-pill.admin { border: 1px solid var(--gold-dim); color: var(--gold); background: rgba(201,168,76,0.06); }
+
+  /* Form */
+  .form-group { margin-bottom: 16px; }
+  .form-label { display: block; font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted2); margin-bottom: 7px; }
+  .form-input {
+    width: 100%; background: var(--surface2); border: 1px solid var(--border2); color: var(--text);
+    padding: 10px 14px; border-radius: var(--radius); font-family: 'DM Mono', monospace; font-size: 13px;
+  }
+  .form-input:focus { outline: none; border-color: var(--gold-dim); }
+  .form-input::placeholder { color: var(--muted); }
+  .form-hint { font-size: 11px; color: var(--muted2); margin-top: 5px; }
+
+  /* Buttons */
+  .btn-submit {
+    background: var(--gold); color: #0a0a0a; border: none;
+    padding: 10px 22px; border-radius: var(--radius); font-family: 'DM Mono', monospace;
+    font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; cursor: pointer;
+    transition: background 0.2s;
+  }
+  .btn-submit:hover { background: #dbb85c; }
+  .btn-submit:disabled { opacity: 0.5; cursor: not-allowed; }
+  .btn-danger-full {
+    background: none; border: 1px solid #4a1a1a; color: var(--red);
+    padding: 10px 22px; border-radius: var(--radius); font-family: 'DM Mono', monospace;
+    font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; cursor: pointer;
+    width: 100%; transition: background 0.2s, border-color 0.2s;
+  }
+  .btn-danger-full:hover { background: #1a0808; border-color: var(--red); }
+
+  /* Danger zone */
+  .card.danger { border-color: #3a1a1a; }
+  .card.danger .card-title { color: var(--red); }
+
+  /* Feedback */
+  .feedback { font-size: 12px; margin-top: 10px; min-height: 18px; }
+  .feedback.ok  { color: #4a9; }
+  .feedback.err { color: #e74c3c; }
+
+  /* Google note */
+  .google-note {
+    background: var(--surface2); border: 1px solid var(--border2);
+    border-radius: var(--radius); padding: 12px 16px;
+    font-size: 12px; color: var(--muted2); line-height: 1.6;
+  }
+
+  /* Modal */
+  .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.75); z-index: 500; align-items: center; justify-content: center; }
+  .modal-overlay.open { display: flex; }
+  .modal { background: var(--surface); border: 1px solid var(--border2); border-radius: var(--radius); padding: 32px; max-width: 400px; width: 90%; }
+  .modal h3 { font-size: 15px; margin-bottom: 10px; }
+  .modal p  { font-size: 12px; color: var(--muted2); margin-bottom: 20px; line-height: 1.6; }
+  .modal-actions { display: flex; gap: 10px; justify-content: flex-end; }
+  .modal .form-group { margin-bottom: 0; }
+  .btn-modal-cancel { background: none; border: 1px solid var(--border2); color: var(--muted2); padding: 8px 16px; border-radius: var(--radius); font-family: 'DM Mono', monospace; font-size: 11px; cursor: pointer; }
+  .btn-modal-cancel:hover { color: var(--text); }
+  .btn-modal-danger { background: var(--red); color: #fff; border: none; padding: 8px 16px; border-radius: var(--radius); font-family: 'DM Mono', monospace; font-size: 11px; cursor: pointer; }
+  .btn-modal-danger:hover { background: #e74c3c; }
+  .btn-modal-danger:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  @media (max-width: 600px) {
+    nav { padding: 16px 20px; }
+    main { padding: 32px 16px; }
+    .card { padding: 20px; }
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <a class="logo" href="/">Reaction<span>Cam</span></a>
+  <div class="nav-right">
+    <a class="btn-nav" href="/dashboard">← Mon espace</a>
+  </div>
+</nav>
+
+<main>
+  <h1 class="page-title">Mon <em>compte</em></h1>
+
+  <!-- Infos -->
+  <div class="card">
+    <div class="card-title">Informations</div>
+    <div class="info-row">
+      <span class="info-label">Nom</span>
+      <span class="info-value" id="infoName">…</span>
+    </div>
+    <div class="info-row">
+      <span class="info-label">Email</span>
+      <span class="info-value" id="infoEmail">…</span>
+    </div>
+    <div class="info-row">
+      <span class="info-label">Plan</span>
+      <span class="info-value"><span class="plan-pill free" id="infoPlan">…</span></span>
+    </div>
+    <div class="info-row">
+      <span class="info-label">Connexion</span>
+      <span class="info-value" id="infoAuth">…</span>
+    </div>
+  </div>
+
+  <!-- Changer le nom -->
+  <div class="card">
+    <div class="card-title">Changer le nom affiché</div>
+    <div class="form-group">
+      <label class="form-label" for="inputName">Nouveau nom</label>
+      <input class="form-input" type="text" id="inputName" placeholder="Ton nom" maxlength="60">
+    </div>
+    <button class="btn-submit" id="btnName" onclick="changeName()">Mettre à jour</button>
+    <div class="feedback" id="feedName"></div>
+  </div>
+
+  <!-- Changer le mot de passe -->
+  <div class="card" id="cardPassword">
+    <div class="card-title">Changer le mot de passe</div>
+    <div class="form-group">
+      <label class="form-label" for="inputCurrentPwd">Mot de passe actuel</label>
+      <input class="form-input" type="password" id="inputCurrentPwd" placeholder="••••••••">
+    </div>
+    <div class="form-group">
+      <label class="form-label" for="inputNewPwd">Nouveau mot de passe</label>
+      <input class="form-input" type="password" id="inputNewPwd" placeholder="••••••••">
+      <div class="form-hint">6 caractères minimum</div>
+    </div>
+    <div class="form-group">
+      <label class="form-label" for="inputConfirmPwd">Confirmer</label>
+      <input class="form-input" type="password" id="inputConfirmPwd" placeholder="••••••••">
+    </div>
+    <button class="btn-submit" id="btnPassword" onclick="changePassword()">Modifier le mot de passe</button>
+    <div class="feedback" id="feedPassword"></div>
+  </div>
+
+  <!-- Danger zone -->
+  <div class="card danger">
+    <div class="card-title">Zone de danger</div>
+    <p style="font-size:12px;color:var(--muted2);margin-bottom:16px;line-height:1.7;">
+      Supprime définitivement ton compte, toutes tes vidéos et les réactions associées.
+      Les fichiers sont effacés de nos serveurs. <strong style="color:var(--text)">Cette action est irréversible.</strong>
+    </p>
+    <button class="btn-danger-full" onclick="openDeleteModal()">Supprimer mon compte</button>
+  </div>
+</main>
+
+<!-- Modal suppression compte -->
+<div class="modal-overlay" id="deleteModal">
+  <div class="modal">
+    <h3>Supprimer mon compte</h3>
+    <p>
+      Toutes tes vidéos et réactions seront effacées.<br>
+      <strong style="color:var(--text)" id="modalPwdNote"></strong>
+    </p>
+    <div class="form-group" id="modalPwdGroup" style="margin-bottom:16px;">
+      <label class="form-label" for="modalPwd">Confirme ton mot de passe</label>
+      <input class="form-input" type="password" id="modalPwd" placeholder="••••••••">
+    </div>
+    <div class="feedback" id="feedDelete" style="margin-bottom:12px;"></div>
+    <div class="modal-actions">
+      <button class="btn-modal-cancel" onclick="closeDeleteModal()">Annuler</button>
+      <button class="btn-modal-danger" id="btnDelete" onclick="deleteAccount()">Supprimer définitivement</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let _me = null;
+
+async function api(url, opts = {}) {
+  const res = await fetch(url, { credentials: 'include', ...opts,
+    headers: { 'Content-Type': 'application/json', ...(opts.headers || {}) }
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || res.statusText);
+  return data;
+}
+
+(async () => {
+  const me = await api('/api/auth/me').catch(() => null);
+  if (!me) { window.location = '/login'; return; }
+  _me = me;
+
+  document.getElementById('infoName').textContent  = me.name;
+  document.getElementById('infoEmail').textContent = me.email;
+  document.getElementById('inputName').value = me.name;
+
+  const pill = document.getElementById('infoPlan');
+  pill.textContent = me.planLabel;
+  pill.className = `plan-pill ${me.plan}`;
+
+  // Connexion type (on ne sait pas depuis /api/auth/me si Google — on affiche juste l'email)
+  // On va tenter un appel pour savoir si password existe via un changement vide
+  document.getElementById('infoAuth').textContent = 'Email / mot de passe';
+})();
+
+// ── Changer le nom ────────────────────────────────────────────────────────────
+async function changeName() {
+  const btn  = document.getElementById('btnName');
+  const feed = document.getElementById('feedName');
+  const name = document.getElementById('inputName').value.trim();
+  if (!name) { setFeed(feed, 'Saisis un nom.', 'err'); return; }
+  btn.disabled = true;
+  try {
+    await api('/api/account/name', { method: 'PATCH', body: JSON.stringify({ name }) });
+    setFeed(feed, 'Nom mis à jour.', 'ok');
+    document.getElementById('infoName').textContent = name;
+  } catch (e) {
+    setFeed(feed, e.message, 'err');
+  } finally { btn.disabled = false; }
+}
+
+// ── Changer le mot de passe ───────────────────────────────────────────────────
+async function changePassword() {
+  const btn     = document.getElementById('btnPassword');
+  const feed    = document.getElementById('feedPassword');
+  const current = document.getElementById('inputCurrentPwd').value;
+  const next    = document.getElementById('inputNewPwd').value;
+  const confirm = document.getElementById('inputConfirmPwd').value;
+  if (!current)        { setFeed(feed, 'Saisis ton mot de passe actuel.', 'err'); return; }
+  if (next.length < 6) { setFeed(feed, 'Nouveau mot de passe trop court (6 min).', 'err'); return; }
+  if (next !== confirm) { setFeed(feed, 'Les mots de passe ne correspondent pas.', 'err'); return; }
+  btn.disabled = true;
+  try {
+    await api('/api/account/change-password', { method: 'POST', body: JSON.stringify({ currentPassword: current, newPassword: next }) });
+    setFeed(feed, 'Mot de passe modifié.', 'ok');
+    document.getElementById('inputCurrentPwd').value = '';
+    document.getElementById('inputNewPwd').value     = '';
+    document.getElementById('inputConfirmPwd').value = '';
+  } catch (e) {
+    setFeed(feed, e.message, 'err');
+  } finally { btn.disabled = false; }
+}
+
+// ── Supprimer le compte ───────────────────────────────────────────────────────
+function openDeleteModal() {
+  document.getElementById('feedDelete').textContent = '';
+  document.getElementById('modalPwd').value = '';
+  document.getElementById('deleteModal').classList.add('open');
+}
+function closeDeleteModal() {
+  document.getElementById('deleteModal').classList.remove('open');
+}
+
+async function deleteAccount() {
+  const btn      = document.getElementById('btnDelete');
+  const feed     = document.getElementById('feedDelete');
+  const password = document.getElementById('modalPwd').value;
+  btn.disabled = true;
+  try {
+    await api('/api/account', { method: 'DELETE', body: JSON.stringify({ password }) });
+    window.location = '/';
+  } catch (e) {
+    setFeed(feed, e.message, 'err');
+    btn.disabled = false;
+  }
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function setFeed(el, msg, type) {
+  el.textContent = msg;
+  el.className = `feedback ${type}`;
+}
+
+document.getElementById('deleteModal').addEventListener('click', e => {
+  if (e.target === e.currentTarget) closeDeleteModal();
+});
+
+// Confirm on enter in modal password field
+document.getElementById('modalPwd').addEventListener('keydown', e => {
+  if (e.key === 'Enter') deleteAccount();
+});
+</script>
+</body>
+</html>

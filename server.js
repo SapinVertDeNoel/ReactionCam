@@ -691,6 +691,70 @@ app.post('/api/billing/portal', requireAuth, async (req, res) => {
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
+// COMPTE UTILISATEUR
+// ═══════════════════════════════════════════════════════════════════════════════
+
+app.patch('/api/account/name', requireAuth, async (req, res) => {
+  try {
+    const { name } = req.body;
+    if (!name || name.trim().length < 2)
+      return res.status(400).json({ error: 'Nom trop court (2 caractères min)' });
+    const user = await User.findById(req.session.userId);
+    if (!user) return res.status(404).json({ error: 'Introuvable' });
+    user.name = name.trim().slice(0, 60);
+    await user.save();
+    req.session.userName = user.name;
+    await req.session.save();
+    res.json({ ok: true, name: user.name });
+  } catch (e) {
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+app.post('/api/account/change-password', requireAuth, async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+    if (!newPassword || newPassword.length < 6)
+      return res.status(400).json({ error: 'Nouveau mot de passe trop court (6 caractères min)' });
+    const user = await User.findById(req.session.userId);
+    if (!user) return res.status(404).json({ error: 'Introuvable' });
+    if (!user.password)
+      return res.status(400).json({ error: 'Ce compte utilise la connexion Google, pas de mot de passe à modifier.' });
+    if (!(await bcrypt.compare(currentPassword || '', user.password)))
+      return res.status(401).json({ error: 'Mot de passe actuel incorrect' });
+    user.password = await bcrypt.hash(newPassword, 10);
+    await user.save();
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+app.delete('/api/account', requireAuth, async (req, res) => {
+  try {
+    const { password } = req.body;
+    const user = await User.findById(req.session.userId);
+    if (!user) return res.status(404).json({ error: 'Introuvable' });
+    if (ADMIN_EMAILS.includes(user.email))
+      return res.status(403).json({ error: 'Impossible de supprimer un compte admin.' });
+    if (user.password && !(await bcrypt.compare(password || '', user.password)))
+      return res.status(401).json({ error: 'Mot de passe incorrect' });
+    const videos = await Video.find({ userId: user._id });
+    for (const v of videos) {
+      const reactions = await Reaction.find({ videoId: v._id });
+      for (const r of reactions) await cloudinary.uploader.destroy(r.cloudinaryId, { resource_type: 'video' }).catch(() => {});
+      await Reaction.deleteMany({ videoId: v._id });
+      await cloudinary.uploader.destroy(v.cloudinaryId, { resource_type: 'video' }).catch(() => {});
+    }
+    await Video.deleteMany({ userId: user._id });
+    await User.deleteOne({ _id: user._id });
+    req.session.destroy(() => res.json({ ok: true }));
+  } catch (e) {
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
 // ADMIN API
 // ═══════════════════════════════════════════════════════════════════════════════
 
@@ -901,6 +965,7 @@ app.delete('/api/admin/reactions/:id', requireAdmin, async (req, res) => {
 // ═══════════════════════════════════════════════════════════════════════════════
 // PAGES
 // ═══════════════════════════════════════════════════════════════════════════════
+app.get('/account',         (req, res) => res.sendFile(path.join(__dirname, 'public', 'account.html')));
 app.get('/admin',           requireAdminPage, (req, res) => res.sendFile(path.join(__dirname, 'public', 'admin.html')));
 app.get('/admin/users/:id', requireAdminPage, (req, res) => res.sendFile(path.join(__dirname, 'public', 'admin-user.html')));
 app.get('/watch/:id',  (req, res) => res.sendFile(path.join(__dirname, 'public', 'watch.html')));

@@ -34,10 +34,11 @@ nav {
 .logo { font-family: 'Cormorant Garamond', serif; font-size: 20px; font-weight: 300; letter-spacing: 0.12em; color: var(--gold); text-decoration: none; }
 .logo span { font-style: italic; }
 .nav-right { display: flex; align-items: center; gap: 12px; }
-.user-name { font-size: 12px; color: var(--muted); letter-spacing: 0.06em; }
+.user-name { font-size: 12px; color: var(--muted); letter-spacing: 0.06em; text-decoration: none; cursor: pointer; }
+.user-name:hover { color: var(--text); }
 .btn-logout { background: none; border: 1px solid var(--border); border-radius: 2px; padding: 8px 16px; color: var(--muted); font-family: 'DM Mono', monospace; font-size: 11px; letter-spacing: 0.1em; cursor: pointer; transition: color 0.2s, border-color 0.2s; }
 .btn-logout:hover { color: var(--text); border-color: var(--muted); }
-.btn-admin { background: none; border: 1px solid var(--gold-dim); border-radius: 2px; padding: 8px 16px; color: var(--gold); font-family: 'DM Mono', monospace; font-size: 11px; letter-spacing: 0.1em; text-decoration: none; transition: background 0.2s; }
+.btn-admin { background: none; border: 1px solid var(--gold-dim); border-radius: 2px; padding: 3px 8px; color: var(--gold); font-family: 'DM Mono', monospace; font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; text-decoration: none; transition: background 0.2s; }
 .btn-admin:hover { background: rgba(201,168,76,0.08); }
 .plan-badge { display: inline-block; padding: 3px 8px; border-radius: 2px; font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; }
 .plan-badge.free { border: 1px solid var(--border); color: var(--muted); }
@@ -155,7 +156,7 @@ main { flex: 1; padding: 48px; max-width: 1200px; width: 100%; margin: 0 auto; }
     <a class="logo" href="/">Reaction<span>Cam</span></a>
     <div class="nav-right">
       <div id="rc-controls-mount"></div>
-      <span class="user-name" id="userName">…</span>
+      <a class="user-name" href="/account" id="userName">…</a>
       <span class="plan-badge free" id="planBadge">…</span>
       <button class="btn-logout" id="btnLogout" data-i18n="nav.logout">Déconnexion</button>
     </div>
