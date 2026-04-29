@@ -33,13 +33,13 @@
 
   /* ── Header ── */
   header {
-    display: flex; align-items: center;
+    display: flex; align-items: center; justify-content: space-between;
     height: 60px; padding: 0 48px; border-bottom: 1px solid var(--border);
     position: sticky; top: 0; background: rgba(10,10,10,0.95);
     backdrop-filter: blur(8px); z-index: 100; gap: 16px;
   }
-  header #rc-controls-mount { margin-left: auto; }
   .logo { display: inline-flex; align-items: center; gap: 6px; text-decoration: none; }
+  .header-right { display: flex; align-items: center; gap: 16px; position: relative; }
   .nav-links { display: flex; gap: 24px; align-items: center; }
   .nav-links a { font-size: 11px; letter-spacing: 0.12em; color: var(--muted); text-decoration: none; text-transform: uppercase; transition: color 0.2s; }
   .nav-links a:hover { color: var(--text); }
@@ -155,18 +155,20 @@
 
 <header>
   <a class="logo" href="/"><img src="/logo-dark.svg" alt="" height="32"><img src="/titre.svg" alt="ReactionCam"></a><script>(function(){if(document.documentElement.getAttribute('data-theme')==='light'){var i=document.querySelectorAll('.logo img');if(i[0])i[0].src='/logo.svg';if(i[1])i[1].src='/titre-light.svg';}})()</script>
-  <nav class="nav-links">
-    <a href="/" data-i18n="nav.home">Accueil</a>
-    <a href="/pricing" class="active" data-i18n="nav.pricing">Tarifs</a>
-    <span id="navAuth" style="display:flex;gap:16px;">
-      <a href="/login" data-i18n="nav.login">Connexion</a>
-      <a href="/register" style="color:var(--gold);" data-i18n="nav.register">Créer un compte</a>
-    </span>
-    <span id="navUser" style="display:none;gap:16px;">
-      <a href="/dashboard" data-i18n="nav.dashboard">Mon espace</a>
-    </span>
-  </nav>
-  <div id="rc-controls-mount"></div>
+  <div class="header-right">
+    <nav class="nav-links">
+      <a href="/" data-i18n="nav.home">Accueil</a>
+      <a href="/pricing" class="active" data-i18n="nav.pricing">Tarifs</a>
+      <span id="navAuth" style="display:flex;gap:16px;">
+        <a href="/login" data-i18n="nav.login">Connexion</a>
+        <a href="/register" style="color:var(--gold);" data-i18n="nav.register">Créer un compte</a>
+      </span>
+      <span id="navUser" style="display:none;gap:16px;">
+        <a href="/dashboard" data-i18n="nav.dashboard">Mon espace</a>
+      </span>
+    </nav>
+    <div id="rc-controls-mount"></div>
+  </div>
 </header>
 
 <main>
