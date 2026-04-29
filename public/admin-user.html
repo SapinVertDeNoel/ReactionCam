@@ -2,7 +2,9 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
-<link rel="icon" href="/logo.svg" type="image/svg+xml">
+<link rel="icon" href="/logo-dark.svg" type="image/svg+xml">
+<link rel="preload" href="/logo-dark.svg" as="image" type="image/svg+xml">
+<link rel="preload" href="/titre.svg" as="image" type="image/svg+xml">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Utilisateur — Admin ReactionCam</title>
 <style>
@@ -23,7 +25,7 @@
     position: sticky; top: 0; z-index: 100;
   }
   .header-logo { display: inline-flex; align-items: center; gap: 5px; text-decoration: none; }
-  .header-logo img[src="/logo.svg"], .header-logo img[src="/logo-dark.svg"] { height: 34px; width: auto; display: block; margin-right: 10px; }
+  .header-logo img[src="/logo-dark.svg"], .header-logo img[src="/logo-dark.svg"] { height: 34px; width: auto; display: block; margin-right: 10px; }
   .header-logo img[src="/titre.svg"], .header-logo img[src="/titre-light.svg"] { height: 40px; width: auto; display: block; }
   .header-badge { background: var(--gold); color: #0a0a0a; font-size: 9px; letter-spacing: .15em; text-transform: uppercase; padding: 2px 7px; border-radius: 2px; }
   .back-btn { color: var(--muted); text-decoration: none; font-size: 12px; display: flex; align-items: center; gap: 6px; }
@@ -139,7 +141,7 @@
 <body>
 
 <header class="header">
-  <a class="header-logo" href="/admin"><img src="/logo.svg" alt="" height="28"><img src="/titre.svg" alt="ReactionCam"></a>
+  <a class="header-logo" href="/admin"><img src="/logo-dark.svg" alt="" height="28"><img src="/titre.svg" alt="ReactionCam"></a>
   <span class="header-badge">Admin</span>
   <span class="header-spacer"></span>
   <a class="back-btn" href="/admin">← Retour à la liste</a>

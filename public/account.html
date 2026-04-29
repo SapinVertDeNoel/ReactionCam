@@ -2,7 +2,9 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
-<link rel="icon" href="/logo.svg" type="image/svg+xml">
+<link rel="icon" href="/logo-dark.svg" type="image/svg+xml">
+<link rel="preload" href="/logo-dark.svg" as="image" type="image/svg+xml">
+<link rel="preload" href="/titre.svg" as="image" type="image/svg+xml">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="robots" content="noindex">
 <title>Mon compte — ReactionCam</title>
@@ -27,7 +29,7 @@
     backdrop-filter: blur(8px); z-index: 100;
   }
   .logo { display: inline-flex; align-items: center; gap: 6px; text-decoration: none; }
-  .logo img[src="/logo.svg"], .logo img[src="/logo-dark.svg"] { height: 34px; width: auto; display: block; margin-right: 10px; }
+  .logo img[src="/logo-dark.svg"], .logo img[src="/logo-dark.svg"] { height: 34px; width: auto; display: block; margin-right: 10px; }
   .logo img[src="/titre.svg"], .logo img[src="/titre-light.svg"] { height: 40px; width: auto; display: block; }
   .logo span { font-style: italic; }
   .nav-right { display: flex; align-items: center; gap: 12px; }
@@ -124,7 +126,7 @@
 <body>
 
 <nav>
-  <a class="logo" href="/"><img src="/logo.svg" alt="" height="32"><img src="/titre.svg" alt="ReactionCam"></a>
+  <a class="logo" href="/"><img src="/logo-dark.svg" alt="" height="32"><img src="/titre.svg" alt="ReactionCam"></a>
   <div class="nav-right">
     <a class="btn-nav" href="/dashboard">← Mon espace</a>
   </div>
