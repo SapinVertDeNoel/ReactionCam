@@ -536,8 +536,8 @@
       '@media (max-width:600px) {',
       '  #rc-controls-mount { display:none !important; }',
       '  #rc-mobile-btn { display:flex !important; }',
-      '  .logo img:first-child { height:26px !important; }',
-      '  .logo img:last-child { height:28px !important; }',
+      '  .logo img.logo-icon { height:26px !important; }',
+      '  .logo img.logo-titre { height:28px !important; }',
       '}',
     ].join('\n');
     document.head.appendChild(style);

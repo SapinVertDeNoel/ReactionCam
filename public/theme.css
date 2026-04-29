@@ -7,7 +7,7 @@
 }
 [data-theme="light"] body::before { opacity: 0.10 !important; }
 [data-theme="light"] nav,
-[data-theme="light"] header { background: rgba(245,241,234,0.97) !important; }
+[data-theme="light"] header { background: rgba(245,241,234,0.97) !important; box-shadow: 0 1px 0 rgba(0,0,0,0.10) !important; }
 [data-theme="light"] .drop-zone { background: #faf7f2 !important; }
 [data-theme="light"] .drop-zone:hover,
 [data-theme="light"] .drop-zone.drag-over { background: #ede7da !important; }
@@ -33,10 +33,13 @@
 [data-theme="light"] .consent-list { background: #f5f1ea !important; border-color: #ddd5c8 !important; }
 [data-theme="light"] .plan-card.featured { background: #ede7da !important; }
 
-/* Logo & titre : le JS (logo-theme.js) change le src selon le thème */
-/* Sizing only — no filter needed */
+/* Logo & titre : CSS pur, pas de JS swap — aucun flash */
 .logo { align-self: center; }
-.logo img[src="/logo.svg"],
-.logo img[src="/logo-dark.svg"] { height: 34px; width: auto; display: block; margin-right: 10px; }
-.logo img[src="/titre.svg"],
-.logo img[src="/titre-light.svg"] { height: 40px; width: auto; display: block; }
+.logo img { width: auto; display: block; }
+.logo img.logo-icon { height: 34px; margin-right: 10px; }
+.logo img.logo-titre { height: 40px; }
+/* Par défaut mode sombre : cacher les variantes claires */
+.logo img.light { display: none !important; }
+/* Mode clair : cacher les variantes sombres, montrer les claires */
+[data-theme="light"] .logo img.dark  { display: none !important; }
+[data-theme="light"] .logo img.light { display: block !important; }
