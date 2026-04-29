@@ -2,6 +2,7 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
+<script>document.documentElement.setAttribute('data-theme',localStorage.getItem('rc-theme')||'dark')</script>
 <link rel="icon" href="/logo-dark.svg" type="image/svg+xml">
 <link rel="preload" href="/logo-dark.svg" as="image" type="image/svg+xml">
 <link rel="preload" href="/titre.svg" as="image" type="image/svg+xml">
@@ -116,20 +117,20 @@
   .btn-modal-danger:disabled { opacity: 0.5; cursor: not-allowed; }
 
   @media (max-width: 600px) {
-    nav { padding: 16px 20px; }
+    nav { height: 62px; padding: 0 18px; }
     main { padding: 32px 16px; }
     .card { padding: 20px; }
   }
 </style>
+<link rel="stylesheet" href="/theme.css">
 <script src="/logo-theme.js" defer></script>
+<script src="/ui.js"></script>
 </head>
 <body>
 
 <nav>
   <a class="logo" href="/"><img src="/logo-dark.svg" alt="" height="32"><img src="/titre.svg" alt="ReactionCam"></a><script>(function(){if(document.documentElement.getAttribute('data-theme')==='light'){var i=document.querySelectorAll('.logo img');if(i[0])i[0].src='/logo.svg';if(i[1])i[1].src='/titre-light.svg';}})()</script>
-  <div class="nav-right">
-    <a class="btn-nav" href="/dashboard">← Mon espace</a>
-  </div>
+  <div id="rc-controls-mount"></div>
 </nav>
 
 <main>

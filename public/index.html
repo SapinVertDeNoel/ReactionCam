@@ -60,12 +60,13 @@
   header {
     display: flex;
     align-items: center;
-    justify-content: space-between;
     height: 60px; padding: 0 48px;
     border-bottom: 1px solid var(--border);
     gap: 16px;
-    position: relative;
-    flex-shrink: 0;
+    position: sticky; top: 0;
+    background: rgba(10,10,10,0.95);
+    backdrop-filter: blur(8px);
+    z-index: 100;
   }
   header .tagline { position: absolute; left: 50%; transform: translateX(-50%); pointer-events: none; }
   header #rc-controls-mount { margin-left: auto; }
@@ -401,7 +402,6 @@
 <header>
   <a class="logo" href="/"><img src="/logo-dark.svg" alt="" height="36"><img src="/titre.svg" alt="ReactionCam"></a><script>(function(){if(document.documentElement.getAttribute('data-theme')==='light'){var i=document.querySelectorAll('.logo img');if(i[0])i[0].src='/logo.svg';if(i[1])i[1].src='/titre-light.svg';}})()</script>
   <span class="tagline" data-i18n="index.tagline">Capture les vraies réactions</span>
-  <div id="rc-controls-mount"></div>
   <div id="authNav" style="display:flex;gap:12px;align-items:center;">
     <a href="/pricing" style="font-size:11px;letter-spacing:0.12em;color:var(--muted);text-decoration:none;text-transform:uppercase;" data-i18n="nav.pricing">Tarifs</a>
     <a href="/login" style="font-size:11px;letter-spacing:0.12em;color:var(--muted);text-decoration:none;text-transform:uppercase;" data-i18n="nav.login">Connexion</a>
@@ -412,6 +412,7 @@
     <a href="/dashboard" style="font-size:11px;letter-spacing:0.12em;color:var(--muted);text-decoration:none;text-transform:uppercase;" data-i18n="nav.dashboard">Mon espace</a>
     <a href="/account" id="navUserName" style="font-size:11px;color:var(--gold);letter-spacing:0.08em;text-decoration:none;"></a>
   </div>
+  <div id="rc-controls-mount"></div>
 </header>
 
 <main class="hero">

@@ -33,11 +33,12 @@
 
   /* ── Header ── */
   header {
-    display: flex; align-items: center; justify-content: space-between;
+    display: flex; align-items: center;
     height: 60px; padding: 0 48px; border-bottom: 1px solid var(--border);
     position: sticky; top: 0; background: rgba(10,10,10,0.95);
     backdrop-filter: blur(8px); z-index: 100; gap: 16px;
   }
+  header #rc-controls-mount { margin-left: auto; }
   .logo { display: inline-flex; align-items: center; gap: 6px; text-decoration: none; }
   .nav-links { display: flex; gap: 24px; align-items: center; }
   .nav-links a { font-size: 11px; letter-spacing: 0.12em; color: var(--muted); text-decoration: none; text-transform: uppercase; transition: color 0.2s; }
