@@ -131,11 +131,11 @@
     .faq { padding: 0 20px 64px; }
     footer { padding: 20px; flex-direction: column; gap: 8px; }
   }
+  @media (max-width: 600px) {
+    header { height: 52px; padding: 0 18px; gap: 0; }
+    .nav-links { display: none !important; }
+  }
   @media (max-width: 480px) {
-    header { padding: 14px 16px; gap: 8px; }
-    .nav-links { gap: 14px; }
-    .nav-links a:not(.active):not([style]) { display: none; }
-    #navAuth a:first-child { display: none; }
     .hero { padding: 36px 16px 32px; }
     .plans { padding: 0 16px 48px; }
     .plan-card { padding: 28px 18px; }
@@ -246,6 +246,13 @@
 <script>
 let me = null;
 
+// Mobile menu — état initial (non connecté)
+document.addEventListener('rc-mobile-ready', function () {
+  window.RC.addMobileLink(window.RC.makeMobileLink(window.__('nav.home'), '/', false, 'nav.home'));
+  window.RC.addMobileLink(window.RC.makeMobileLink(window.__('nav.login'), '/login', false, 'nav.login'));
+  window.RC.addMobileLink(window.RC.makeMobileLink(window.__('nav.register'), '/register', true, 'nav.register'));
+});
+
 fetch('/api/auth/me').then(r => {
   if (!r.ok) return;
   return r.json();
@@ -254,6 +261,11 @@ fetch('/api/auth/me').then(r => {
   me = u;
   document.getElementById('navAuth').style.display = 'none';
   document.getElementById('navUser').style.display = 'flex';
+  // Mobile menu — état connecté
+  window.RC.clearMobileLinks();
+  window.RC.addMobileLink(window.RC.makeMobileLink(window.__('nav.home'), '/', false, 'nav.home'));
+  window.RC.addMobileLink(window.RC.makeMobileLink(window.__('nav.dashboard'), '/dashboard', false, 'nav.dashboard'));
+  window.RC.addMobileLink(window.RC.makeMobileLink(u.name, '/account', true));
 
   if (u.plan === 'pro' || u.plan === 'admin') {
     const btn = document.getElementById('btnPro');

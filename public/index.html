@@ -361,11 +361,12 @@
   /* ── Mobile ── */
   @media (max-width: 600px) {
     header {
-      padding: 14px 20px;
-      gap: 10px;
+      height: 52px;
+      padding: 0 18px;
+      gap: 0;
     }
     header .tagline { display: none; }
-    .logo { font-size: 18px; }
+    #authNav, #userNav { display: none !important; }
     .hero {
       padding: 40px 20px 48px;
     }
@@ -386,20 +387,6 @@
       gap: 8px;
       text-align: center;
     }
-    #authNav, #userNav { gap: 6px; }
-    #authNav a:first-child { display: none; }
-    /* Retire les bordures des liens nav sur mobile pour éviter le débordement */
-    #authNav a, #userNav a, #navUserName {
-      border: none;
-      background: transparent;
-      padding: 2px 5px;
-    }
-  }
-  @media (max-width: 390px) {
-    /* Très petits écrans : cache "Connexion" et "Tarifs" pour libérer de la place */
-    #authNav a[href="/login"] { display: none; }
-    #userNav a[href="/pricing"] { display: none; }
-    #navUserName { max-width: 72px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   }
 </style>
 <link rel="stylesheet" href="/theme.css">
@@ -488,7 +475,19 @@ fetch('/api/auth/me').then(r => {
     document.getElementById('authNav').style.display = 'none';
     document.getElementById('userNav').style.display = 'flex';
     document.getElementById('navUserName').textContent = u.name;
+    // Mobile menu — state connecté
+    window.RC.clearMobileLinks();
+    window.RC.addMobileLink(window.RC.makeMobileLink(window.__('nav.pricing'), '/pricing', false, 'nav.pricing'));
+    window.RC.addMobileLink(window.RC.makeMobileLink(window.__('nav.dashboard'), '/dashboard', false, 'nav.dashboard'));
+    window.RC.addMobileLink(window.RC.makeMobileLink(u.name, '/account', true));
   });
+});
+
+// Mobile menu — état initial (non connecté)
+document.addEventListener('rc-mobile-ready', function () {
+  window.RC.addMobileLink(window.RC.makeMobileLink(window.__('nav.pricing'), '/pricing', false, 'nav.pricing'));
+  window.RC.addMobileLink(window.RC.makeMobileLink(window.__('nav.login'), '/login', false, 'nav.login'));
+  window.RC.addMobileLink(window.RC.makeMobileLink(window.__('nav.register'), '/register', true, 'nav.register'));
 });
 
 const dropZone      = document.getElementById('dropZone');

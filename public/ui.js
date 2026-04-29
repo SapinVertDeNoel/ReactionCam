@@ -432,6 +432,7 @@
   // ── SVG icons ─────────────────────────────────────────────────────────────────
   var SUN_ICON = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><line x1="12" y1="2" x2="12" y2="5"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="4.22" y1="4.22" x2="6.34" y2="6.34"/><line x1="17.66" y1="17.66" x2="19.78" y2="19.78"/><line x1="2" y1="12" x2="5" y2="12"/><line x1="19" y1="12" x2="22" y2="12"/><line x1="4.22" y1="19.78" x2="6.34" y2="17.66"/><line x1="17.66" y1="6.34" x2="19.78" y2="4.22"/></svg>';
   var MOON_ICON = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>';
+  var DOTS_ICON = '<svg width="14" height="14" viewBox="0 0 4 16" fill="currentColor"><circle cx="2" cy="2" r="1.5"/><circle cx="2" cy="8" r="1.5"/><circle cx="2" cy="14" r="1.5"/></svg>';
 
   // ── Global styles (widget only — light theme is in theme.css) ───────────────
   function injectStyles() {
@@ -492,6 +493,52 @@
       '  cursor:pointer; transition:background 0.2s; white-space:nowrap;',
       '}',
       '#rc-cookie-accept:hover { background:#e0bb60; }',
+      /* Mobile menu button */
+      '#rc-mobile-btn {',
+      '  display:none; align-items:center; justify-content:center;',
+      '  width:32px; height:32px; margin-left:auto; flex-shrink:0;',
+      '  background:none; border:1px solid var(--border); border-radius:2px;',
+      '  color:var(--muted); cursor:pointer; padding:0;',
+      '  transition:color 0.2s, border-color 0.2s;',
+      '}',
+      '#rc-mobile-btn:hover, #rc-mobile-btn.open { color:var(--text); border-color:var(--muted); }',
+      /* Mobile dropdown */
+      '#rc-mobile-dd {',
+      '  display:none; position:absolute; right:0; top:calc(100% + 1px);',
+      '  background:var(--surface); border:1px solid var(--border); border-radius:2px;',
+      '  z-index:500; min-width:190px; overflow:hidden;',
+      '  box-shadow:0 8px 24px rgba(0,0,0,0.4);',
+      '}',
+      '#rc-mobile-dd.open { display:block; }',
+      '.rc-mob-row {',
+      '  display:flex; align-items:center; gap:10px;',
+      '  padding:10px 16px; width:100%;',
+      '  font-family:"DM Mono",monospace; font-size:10px; letter-spacing:0.1em; text-transform:uppercase;',
+      '  color:var(--muted); text-decoration:none;',
+      '  background:none; border:none; text-align:left;',
+      '  border-bottom:1px solid var(--border);',
+      '  transition:background 0.15s, color 0.15s; cursor:pointer; box-sizing:border-box;',
+      '}',
+      '.rc-mob-row:last-child { border-bottom:none; }',
+      '.rc-mob-row:hover { background:var(--surface2,#1a1a1a); color:var(--text); }',
+      '.rc-mob-row.gold { color:var(--gold); }',
+      '.rc-mob-lang { display:flex; border-bottom:1px solid var(--border); }',
+      '.rc-mob-lang button {',
+      '  flex:1; padding:8px 0; background:none;',
+      '  border:none; border-right:1px solid var(--border);',
+      '  font-family:"DM Mono",monospace; font-size:9px; letter-spacing:0.12em;',
+      '  color:var(--muted); cursor:pointer; transition:color 0.15s, background 0.15s;',
+      '}',
+      '.rc-mob-lang button:last-child { border-right:none; }',
+      '.rc-mob-lang button:hover { color:var(--text); background:var(--surface2,#1a1a1a); }',
+      '.rc-mob-lang button.rc-lang-active { color:var(--gold); }',
+      /* Logo smaller on mobile */
+      '@media (max-width:600px) {',
+      '  #rc-controls-mount { display:none !important; }',
+      '  #rc-mobile-btn { display:flex !important; }',
+      '  .logo img:first-child { height:26px !important; }',
+      '  .logo img:last-child { height:28px !important; }',
+      '}',
     ].join('\n');
     document.head.appendChild(style);
   }
@@ -548,6 +595,71 @@
     dd.appendChild(trigger);
     dd.appendChild(menu);
     mount.appendChild(dd);
+
+    // ── Mobile trigger + dropdown ─────────────────────────────────────────────
+    var parent = mount.parentElement;
+    if (!parent) return;
+
+    var mBtn = document.createElement('button');
+    mBtn.id = 'rc-mobile-btn';
+    mBtn.setAttribute('aria-label', 'Menu');
+    mBtn.innerHTML = DOTS_ICON;
+    parent.appendChild(mBtn);
+
+    var mDD = document.createElement('div');
+    mDD.id = 'rc-mobile-dd';
+
+    // Theme row
+    var mThemeBtn = document.createElement('button');
+    mThemeBtn.className = 'rc-mob-row';
+    function syncMobileTheme() {
+      mThemeBtn.innerHTML = (window.RC_THEME === 'dark' ? SUN_ICON : MOON_ICON)
+        + '<span>' + (window.RC_THEME === 'dark' ? 'Mode clair' : 'Mode sombre') + '</span>';
+    }
+    syncMobileTheme();
+    mThemeBtn.addEventListener('click', function () {
+      var next = window.RC_THEME === 'dark' ? 'light' : 'dark';
+      applyTheme(next);
+      syncMobileTheme();
+    });
+    mDD.appendChild(mThemeBtn);
+
+    // Lang row
+    var mLangRow = document.createElement('div');
+    mLangRow.className = 'rc-mob-lang';
+    ['fr', 'en', 'es'].forEach(function (l) {
+      var lb = document.createElement('button');
+      lb.textContent = l.toUpperCase();
+      if (l === window.RC_LANG) lb.classList.add('rc-lang-active');
+      lb.addEventListener('click', function () {
+        applyLang(l);
+        mLangRow.querySelectorAll('button').forEach(function (b) { b.classList.remove('rc-lang-active'); });
+        lb.classList.add('rc-lang-active');
+      });
+      mLangRow.appendChild(lb);
+    });
+    mDD.appendChild(mLangRow);
+
+    // Nav links placeholder — pages populate this via window.RC.addMobileLink()
+    var mNav = document.createElement('div');
+    mNav.id = 'rc-mobile-nav';
+    mDD.appendChild(mNav);
+
+    parent.appendChild(mDD);
+
+    // Toggle
+    mBtn.addEventListener('click', function (e) {
+      e.stopPropagation();
+      var open = mDD.classList.toggle('open');
+      mBtn.classList.toggle('open', open);
+    });
+    document.addEventListener('click', function () {
+      mDD.classList.remove('open');
+      mBtn.classList.remove('open');
+    });
+    mDD.addEventListener('click', function (e) { e.stopPropagation(); });
+
+    document.dispatchEvent(new CustomEvent('rc-mobile-ready'));
   }
 
   // ── Cookie banner ─────────────────────────────────────────────────────────────
@@ -572,6 +684,34 @@
     banner.appendChild(btn);
     document.body.appendChild(banner);
   }
+
+  // ── Public API ────────────────────────────────────────────────────────────────
+  window.RC = {
+    applyTheme: applyTheme,
+    applyLang: applyLang,
+    addMobileLink: function (el) {
+      var nav = document.getElementById('rc-mobile-nav');
+      if (nav) nav.appendChild(el);
+    },
+    clearMobileLinks: function () {
+      var nav = document.getElementById('rc-mobile-nav');
+      if (nav) nav.innerHTML = '';
+    },
+    makeMobileLink: function (text, href, gold, i18nKey) {
+      var a = document.createElement('a');
+      a.href = href;
+      a.className = 'rc-mob-row' + (gold ? ' gold' : '');
+      a.textContent = text;
+      if (i18nKey) a.setAttribute('data-i18n', i18nKey);
+      return a;
+    },
+    makeMobileBtn: function (text, gold) {
+      var b = document.createElement('button');
+      b.className = 'rc-mob-row' + (gold ? ' gold' : '');
+      b.textContent = text;
+      return b;
+    },
+  };
 
   // ── Init ──────────────────────────────────────────────────────────────────────
   injectStyles();
