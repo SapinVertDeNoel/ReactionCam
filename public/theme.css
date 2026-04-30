@@ -33,13 +33,32 @@
 [data-theme="light"] .consent-list { background: #f5f1ea !important; border-color: #ddd5c8 !important; }
 [data-theme="light"] .plan-card.featured { background: #ede7da !important; }
 
-/* Logo & titre : CSS pur, pas de JS swap — aucun flash */
-.logo { align-self: center; }
-.logo img { width: auto; display: block; }
-.logo img.logo-icon { height: 34px; margin-right: 10px; }
-.logo img.logo-titre { height: 40px; }
-/* Par défaut mode sombre : cacher les variantes claires */
-.logo img.light { display: none !important; }
-/* Mode clair : cacher les variantes sombres, montrer les claires */
-[data-theme="light"] .logo img.dark  { display: none !important; }
-[data-theme="light"] .logo img.light { display: block !important; }
+/* Logo unifié — inline, une seule couleur sur les deux thèmes,
+   aucun fetch réseau, aucun swap, aucun flash. */
+.logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+  color: var(--gold);
+  white-space: nowrap;
+  line-height: 1;
+  align-self: center;
+}
+.logo .logo-mark {
+  display: block;
+  flex-shrink: 0;
+  color: var(--gold);
+}
+.logo .logo-text {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 24px;
+  font-weight: 500;
+  letter-spacing: 0.005em;
+  color: var(--gold);
+}
+.logo .logo-text em { font-style: italic; font-weight: 400; }
+@media (max-width: 600px) {
+  .logo .logo-mark { width: 19px; height: 19px; }
+  .logo .logo-text { font-size: 20px; }
+}

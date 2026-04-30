@@ -532,12 +532,9 @@
       '.rc-mob-lang button:last-child { border-right:none; }',
       '.rc-mob-lang button:hover { color:var(--text); background:var(--surface2,#1a1a1a); }',
       '.rc-mob-lang button.rc-lang-active { color:var(--gold); }',
-      /* Logo smaller on mobile */
       '@media (max-width:600px) {',
       '  #rc-controls-mount { display:none !important; }',
       '  #rc-mobile-btn { display:flex !important; }',
-      '  .logo img.logo-icon { height:26px !important; }',
-      '  .logo img.logo-titre { height:28px !important; }',
       '}',
     ].join('\n');
     document.head.appendChild(style);

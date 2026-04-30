@@ -3,8 +3,6 @@
 <head>
 <meta charset="UTF-8">
 <link rel="icon" href="/logo-dark.svg" type="image/svg+xml">
-<link rel="preload" href="/logo-dark.svg" as="image" type="image/svg+xml">
-<link rel="preload" href="/titre.svg" as="image" type="image/svg+xml">
 <script>document.documentElement.setAttribute('data-theme',localStorage.getItem('rc-theme')||'dark')</script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="description" content="Partage une vidéo et capture les vraies réactions de tes amis. Génère un lien, ils sont filmés en regardant, tu récupères la réaction. Gratuit.">
@@ -68,6 +66,7 @@
     background: rgba(10,10,10,0.95);
     backdrop-filter: blur(8px);
     z-index: 100;
+    flex-shrink: 0;
   }
   header .tagline { position: absolute; left: 50%; transform: translateX(-50%); pointer-events: none; }
   .header-right { display: flex; align-items: center; gap: 12px; position: relative; }
@@ -401,7 +400,7 @@
 <body>
 
 <header>
-  <a class="logo" href="/"><img src="/logo-dark.svg" class="dark logo-icon" alt="" height="34"><img src="/logo.svg" class="light logo-icon" alt="" height="34"><img src="/titre.svg" class="dark logo-titre" alt="ReactionCam" height="40"><img src="/titre-light.svg" class="light logo-titre" alt="ReactionCam" height="40"></a>
+  <a class="logo" href="/" aria-label="ReactionCam"><svg class="logo-mark" viewBox="0 0 32 32" width="22" height="22" aria-hidden="true" focusable="false"><circle cx="16" cy="16" r="14" fill="none" stroke="currentColor" stroke-width="1.6"/><circle cx="16" cy="16" r="5" fill="currentColor"/></svg><span class="logo-text">Reaction<em>Cam</em></span></a>
   <span class="tagline" data-i18n="index.tagline">Capture les vraies réactions</span>
   <div class="header-right">
     <div id="authNav" style="display:flex;gap:12px;align-items:center;">
