@@ -60,26 +60,6 @@ main { flex: 1; padding: 48px; max-width: 1200px; width: 100%; margin: 0 auto; }
 .video-expiry { font-size: 10px; color: var(--muted); letter-spacing: 0.06em; margin-top: 4px; }
 .video-expiry.soon { color: #e67e22; }
 
-.notif-wrap { position: relative; }
-.btn-notif { background: none; border: 1px solid var(--border); border-radius: 2px; width: 34px; height: 34px; display: inline-flex; align-items: center; justify-content: center; color: var(--muted); cursor: pointer; transition: color 0.2s, border-color 0.2s; position: relative; padding: 0; }
-.btn-notif:hover { color: var(--text); border-color: var(--muted); }
-.btn-notif svg { width: 14px; height: 14px; }
-.notif-dot { position: absolute; top: -4px; right: -4px; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 8px; background: var(--gold); color: #0a0a0a; font-size: 9px; font-weight: 600; letter-spacing: 0; display: none; align-items: center; justify-content: center; line-height: 1; border: 2px solid var(--bg); }
-.notif-dot.show { display: inline-flex; }
-.notif-panel { display: none; position: absolute; top: calc(100% + 10px); right: 0; width: 340px; max-width: calc(100vw - 32px); max-height: 460px; overflow-y: auto; background: var(--surface); border: 1px solid var(--border); border-radius: 3px; box-shadow: 0 12px 40px rgba(0,0,0,0.6); z-index: 150; }
-.notif-panel.open { display: block; }
-.notif-panel-header { padding: 12px 16px; border-bottom: 1px solid var(--border); font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--muted); display: flex; justify-content: space-between; align-items: center; }
-.notif-panel-header em { color: var(--gold); font-style: normal; }
-.notif-empty { padding: 36px 20px; text-align: center; font-size: 11px; color: var(--muted); letter-spacing: 0.06em; }
-.notif-item { display: block; padding: 12px 16px; border-bottom: 1px solid var(--border); text-decoration: none; color: var(--text); transition: background 0.15s; cursor: pointer; }
-.notif-item:last-child { border-bottom: none; }
-.notif-item:hover { background: var(--surface2); }
-.notif-item.unread { background: rgba(201,168,76,0.04); }
-.notif-item.unread::before { content: ''; display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--gold); margin-right: 8px; vertical-align: middle; }
-.notif-item-text { font-size: 12px; line-height: 1.5; }
-.notif-item-text strong { color: var(--gold); font-weight: 400; }
-.notif-item-date { font-size: 10px; color: var(--muted); letter-spacing: 0.06em; margin-top: 4px; }
-
 .toast { position: fixed; bottom: 32px; left: 50%; transform: translateX(-50%); background: var(--green); color: #fff; padding: 12px 24px; border-radius: 3px; font-size: 12px; letter-spacing: 0.08em; z-index: 300; animation: toastIn 0.3s ease; pointer-events: none; }
 @keyframes toastIn { from { opacity: 0; transform: translateX(-50%) translateY(12px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }
 
@@ -225,19 +205,6 @@ main { flex: 1; padding: 48px; max-width: 1200px; width: 100%; margin: 0 auto; }
     <a class="logo" href="/" aria-label="ReactionCam"><svg class="logo-mark" viewBox="0 0 32 32" width="22" height="22" aria-hidden="true" focusable="false"><circle cx="16" cy="16" r="14" fill="none" stroke="currentColor" stroke-width="1.6"/><circle cx="16" cy="16" r="5" fill="currentColor"/></svg><span class="logo-text">Reaction<em>Cam</em></span></a>
     <div class="nav-right">
       <div id="rc-controls-mount"></div>
-      <div class="notif-wrap">
-        <button class="btn-notif" id="btnNotif" aria-label="Notifications">
-          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <path d="M3.5 6.5a4.5 4.5 0 0 1 9 0v3l1 2H2.5l1-2v-3z"/>
-            <path d="M6.5 13.5a1.5 1.5 0 0 0 3 0"/>
-          </svg>
-          <span class="notif-dot" id="notifDot">0</span>
-        </button>
-        <div class="notif-panel" id="notifPanel">
-          <div class="notif-panel-header"><span>Notifications</span></div>
-          <div id="notifList"><div class="notif-empty">Aucune notification</div></div>
-        </div>
-      </div>
       <a class="user-name" href="/account" id="userName">…</a>
       <span class="plan-badge free" id="planBadge">…</span>
       <button class="btn-logout" id="btnLogout" data-i18n="nav.logout">Déconnexion</button>
@@ -290,6 +257,7 @@ main { flex: 1; padding: 48px; max-width: 1200px; width: 100%; margin: 0 auto; }
 </div>
 
 <script src="/ui.js"></script>
+<script src="/rc-notif.js" defer></script>
 <script>
 const DATE_LOCALES = { fr: 'fr-FR', en: 'en-US', es: 'es-ES' };
 
@@ -335,101 +303,6 @@ async function init() {
   }
 
   loadDashboard();
-  initNotifications();
-}
-
-// ── Notifications ───────────────────────────────────────────────────────────
-let _notifPollTimer = null;
-
-function fmtNotifDate(iso) {
-  const d = new Date(iso);
-  const diff = (Date.now() - d.getTime()) / 1000;
-  if (diff < 60)    return 'à l’instant';
-  if (diff < 3600)  return Math.floor(diff / 60) + ' min';
-  if (diff < 86400) return Math.floor(diff / 3600) + ' h';
-  if (diff < 604800) return Math.floor(diff / 86400) + ' j';
-  return d.toLocaleDateString(DATE_LOCALES[localStorage.getItem('rc-lang')] || 'fr-FR');
-}
-
-async function fetchNotifications() {
-  try {
-    const r = await fetch('/api/notifications');
-    if (!r.ok) return;
-    const data = await r.json();
-    renderNotifBadge(data.unread);
-    renderNotifList(data.items);
-  } catch {}
-}
-
-function renderNotifBadge(unread) {
-  const dot = document.getElementById('notifDot');
-  if (unread > 0) {
-    dot.textContent = unread > 99 ? '99+' : String(unread);
-    dot.classList.add('show');
-  } else {
-    dot.classList.remove('show');
-  }
-}
-
-function renderNotifList(items) {
-  const list = document.getElementById('notifList');
-  if (!items || items.length === 0) {
-    list.innerHTML = '<div class="notif-empty">Aucune notification</div>';
-    return;
-  }
-  list.innerHTML = items.map(n => {
-    const title = n.videoTitle ? escHtml(n.videoTitle.slice(0, 50)) : 'ta vidéo';
-    const viewer = escHtml(n.viewerName || 'Anonyme');
-    return `<a class="notif-item ${n.read ? '' : 'unread'}" data-vid="${n.videoId || ''}" href="#">
-      <div class="notif-item-text"><strong>${viewer}</strong> a réagi à <em>${title}</em></div>
-      <div class="notif-item-date">${fmtNotifDate(n.createdAt)}</div>
-    </a>`;
-  }).join('');
-  list.querySelectorAll('.notif-item').forEach(el => {
-    el.addEventListener('click', (e) => {
-      e.preventDefault();
-      const vid = el.dataset.vid;
-      closeNotifPanel();
-      if (vid) {
-        const card = document.querySelector(`.video-card[data-id="${vid}"]`);
-        if (card) {
-          if (!card.classList.contains('open')) card.querySelector('.video-header')?.click();
-          card.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }
-      }
-    });
-  });
-}
-
-function closeNotifPanel() {
-  document.getElementById('notifPanel').classList.remove('open');
-}
-
-async function markNotifsRead() {
-  try { await fetch('/api/notifications/read', { method: 'POST' }); } catch {}
-  renderNotifBadge(0);
-  document.querySelectorAll('.notif-item.unread').forEach(el => el.classList.remove('unread'));
-}
-
-function initNotifications() {
-  const btn   = document.getElementById('btnNotif');
-  const panel = document.getElementById('notifPanel');
-  btn.addEventListener('click', (e) => {
-    e.stopPropagation();
-    const opening = !panel.classList.contains('open');
-    panel.classList.toggle('open');
-    if (opening) {
-      fetchNotifications().then(() => {
-        if (document.getElementById('notifDot').classList.contains('show')) markNotifsRead();
-      });
-    }
-  });
-  document.addEventListener('click', (e) => {
-    if (!panel.contains(e.target) && e.target !== btn && !btn.contains(e.target)) closeNotifPanel();
-  });
-  fetchNotifications();
-  _notifPollTimer = setInterval(fetchNotifications, 30000);
-  document.addEventListener('visibilitychange', () => { if (!document.hidden) fetchNotifications(); });
 }
 
 document.getElementById('btnLogout').addEventListener('click', async () => {

@@ -175,6 +175,7 @@ header { position: fixed; top: 0; left: 0; right: 0; height: 60px; padding: 0 40
 </div>
 
 <script src="/ui.js"></script>
+<script src="/rc-notif.js" defer></script>
 <script>
 // Redirect if already logged in
 fetch('/api/auth/me').then(r => { if (r.ok) location.href = '/dashboard'; });
