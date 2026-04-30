@@ -1,0 +1,14 @@
+{
+  "name": "ReactionCam",
+  "short_name": "ReactionCam",
+  "description": "Partage une vidéo, capture la réaction.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0a0a0a",
+  "theme_color": "#c9a84c",
+  "icons": [
+    { "src": "/favicon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/favicon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "/favicon.svg",     "sizes": "any",     "type": "image/svg+xml", "purpose": "any" }
+  ]
+}
