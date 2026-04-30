@@ -3,8 +3,6 @@
 <head>
 <meta charset="UTF-8">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-<link rel="preload" href="/logo-dark.svg" as="image" type="image/svg+xml">
-<link rel="preload" href="/titre.svg" as="image" type="image/svg+xml">
 <script>document.documentElement.setAttribute('data-theme',localStorage.getItem('rc-theme')||'dark')</script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="description" content="Regarde cette vidéo et enregistre ta réaction en direct avec ta webcam.">
@@ -49,13 +47,20 @@ html, body {
 .screen.active { display: flex; }
 .screen::before, .screen::after { content: ''; flex: 1; min-height: 12px; }
 
-/* ── Logo fixe ── */
+/* ── Logo fixe (caché pendant la lecture vidéo via body.playing) ── */
 .logo {
   position: fixed; top: 0; left: 24px; z-index: 100; height: 60px;
-  display: inline-flex; align-items: center; gap: 5px; text-decoration: none;
+  display: inline-flex; align-items: center; gap: 10px; text-decoration: none;
+  color: var(--gold);
 }
-.logo img[src="/logo-dark.svg"], .logo img[src="/logo-dark.svg"] { height: 34px; width: auto; display: block; margin-right: 10px; }
-.logo img[src="/titre.svg"], .logo img[src="/titre-light.svg"] { height: 40px; width: auto; display: block; }
+.logo .logo-mark { display: block; flex-shrink: 0; color: var(--gold); }
+.logo .logo-text {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 24px; font-weight: 500; line-height: 1;
+  letter-spacing: 0.005em; color: var(--gold);
+}
+.logo .logo-text em { font-style: italic; font-weight: 400; }
+body.playing .logo { display: none !important; }
 
 /* ── Card commune ── */
 .card {
@@ -226,7 +231,7 @@ html, body {
 </head>
 <body>
 
-<a class="logo" href="/"><img src="/logo-dark.svg" class="dark logo-icon" alt="" height="34"><img src="/logo.svg" class="light logo-icon" alt="" height="34"><img src="/titre.svg" class="dark logo-titre" alt="ReactionCam" height="40"><img src="/titre-light.svg" class="light logo-titre" alt="ReactionCam" height="40"></a>
+<a class="logo" href="/" aria-label="ReactionCam"><svg class="logo-mark" viewBox="0 0 32 32" width="22" height="22" aria-hidden="true" focusable="false"><circle cx="16" cy="16" r="14" fill="none" stroke="currentColor" stroke-width="1.6"/><circle cx="16" cy="16" r="5" fill="currentColor"/></svg><span class="logo-text">Reaction<em>Cam</em></span></a>
 
 <!-- ═══ LOADING ═══ -->
 <div class="screen active" id="screenLoading">
@@ -368,6 +373,7 @@ let audioCtx      = null;
 function showScreen(id) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.getElementById(id).classList.add('active');
+  document.body.classList.toggle('playing', id === 'screenPlayer');
 }
 
 // ═══ Boot ════════════════════════════════════════════════════════════════════
