@@ -182,6 +182,26 @@ body.playing .logo { display: none !important; }
 }
 @keyframes blink { 0%,100% { opacity:1; } 50% { opacity:0.15; } }
 
+/* Compte à rebours vidéo */
+.time-ring {
+  position: fixed; top: 16px; left: 16px; z-index: 200;
+  width: 56px; height: 56px;
+  display: none;
+  filter: drop-shadow(0 2px 6px rgba(0,0,0,0.5));
+}
+.time-ring.show { display: block; }
+.time-ring svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+.time-ring .tr-bg { fill: rgba(0,0,0,0.6); stroke: rgba(255,255,255,0.12); stroke-width: 2; }
+.time-ring .tr-fg {
+  fill: none; stroke: var(--gold); stroke-width: 2.5; stroke-linecap: round;
+  transition: stroke-dashoffset 0.25s linear;
+}
+.time-ring .tr-text {
+  position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+  font-size: 13px; font-weight: 600; color: var(--text); letter-spacing: 0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
 /* ── Écran résultat ── */
 .result-preview {
   width: 100%; max-width: 460px;
@@ -323,6 +343,14 @@ body.playing .logo { display: none !important; }
   <div class="rec-badge" id="recBadge" style="display:none;">
     <div class="rec-dot"></div> REC
   </div>
+  <div class="time-ring" id="timeRing" aria-hidden="true">
+    <svg viewBox="0 0 36 36">
+      <circle class="tr-bg" cx="18" cy="18" r="16"/>
+      <circle class="tr-fg" id="timeRingFg" cx="18" cy="18" r="16"
+              stroke-dasharray="100.53" stroke-dashoffset="0"/>
+    </svg>
+    <div class="tr-text" id="timeRingText">0</div>
+  </div>
 </div>
 
 <!-- ═══ RÉSULTAT ═══ -->
@@ -360,6 +388,34 @@ body.playing .logo { display: none !important; }
   </div>
 </div>
 
+<!-- ═══ CONNEXION REQUISE ═══ -->
+<div class="screen" id="screenLogin">
+  <div class="card">
+    <svg style="width:44px;height:44px;margin:0 auto 16px;display:block;opacity:.6" viewBox="0 0 52 52" fill="none" stroke="currentColor" stroke-width="1.2">
+      <rect x="14" y="22" width="24" height="20" rx="3"/>
+      <path d="M19 22v-4a7 7 0 0 1 14 0v4"/>
+    </svg>
+    <h2>Vidéo <em>privée</em></h2>
+    <p style="margin-top:6px;">Cette vidéo n'est accessible qu'à des personnes invitées.<br>Connecte-toi avec l'adresse email à laquelle tu as reçu l'invitation.</p>
+    <a id="loginLink" href="/login" class="btn" style="margin-top:20px;">Se connecter</a>
+    <a href="/" class="btn btn-ghost" style="margin-top:14px;">Accueil</a>
+  </div>
+</div>
+
+<!-- ═══ ACCÈS REFUSÉ ═══ -->
+<div class="screen" id="screenForbidden">
+  <div class="card">
+    <svg style="width:44px;height:44px;margin:0 auto 16px;display:block;opacity:.6" viewBox="0 0 52 52" fill="none" stroke="currentColor" stroke-width="1.2">
+      <circle cx="26" cy="26" r="22"/>
+      <path d="M14 14l24 24"/>
+    </svg>
+    <h2>Accès <em>refusé</em></h2>
+    <p style="margin-top:6px;">Ton compte n'est pas autorisé à voir cette vidéo privée.<br>Vérifie que tu es connecté avec l'adresse email à laquelle tu as reçu l'invitation.</p>
+    <a href="/account" class="btn" style="margin-top:20px;">Mon compte</a>
+    <a href="/" class="btn btn-ghost" style="margin-top:14px;">Accueil</a>
+  </div>
+</div>
+
 <script>
 // ═══ État ═══════════════════════════════════════════════════════════════════
 const videoId = location.pathname.split('/watch/')[1];
@@ -380,9 +436,14 @@ function showScreen(id) {
 (async function boot() {
   if (!videoId) return showScreen('screenError');
   try {
-    const r = await fetch(`/api/video/${videoId}`);
-    if (!r.ok) throw new Error();
-    window._videoUrl = (await r.json()).url;
+    const r = await fetch(`/api/video/${videoId}/exists`);
+    if (r.status === 401) {
+      const back = encodeURIComponent(`/watch/${videoId}`);
+      document.getElementById('loginLink').href = `/login?next=${back}`;
+      return showScreen('screenLogin');
+    }
+    if (r.status === 403) return showScreen('screenForbidden');
+    if (!r.ok)            return showScreen('screenError');
     showScreen('screenConsent');
   } catch { showScreen('screenError'); }
 })();
@@ -461,8 +522,7 @@ async function startExperience() {
 
     // ── 2. Vidéo originale ───────────────────────────────────────────────────────
     originalVideo             = document.createElement('video');
-    originalVideo.crossOrigin = 'anonymous'; // requis pour createMediaElementSource
-    originalVideo.src         = window._videoUrl;
+    originalVideo.src         = `/api/video/${videoId}`;
     originalVideo.playsInline = true;
     originalVideo.preload     = 'auto';
 
@@ -597,9 +657,11 @@ async function startExperience() {
     recorder.start(500);
     await originalVideo.play();
     draw();
+    startTimeRing(originalVideo);
 
     originalVideo.addEventListener('ended', () => {
       running = false;
+      stopTimeRing();
       stopRecording();
     }, { once: true });
 
@@ -615,6 +677,38 @@ function stopRecording() {
   if (webcamStream) webcamStream.getTracks().forEach(t => t.stop());
   if (audioCtx)     audioCtx.close();
   document.getElementById('recBadge').style.display = 'none';
+  stopTimeRing();
+}
+
+// ═══ Compte à rebours visuel ═════════════════════════════════════════════════
+let _timeRingRAF = null;
+const TIME_RING_CIRC = 2 * Math.PI * 16; // r=16 → ~100.53
+
+function startTimeRing(videoEl) {
+  const ring   = document.getElementById('timeRing');
+  const fg     = document.getElementById('timeRingFg');
+  const text   = document.getElementById('timeRingText');
+  const total  = isFinite(videoEl.duration) && videoEl.duration > 0 ? videoEl.duration : 0;
+  if (!total) return;
+
+  ring.classList.add('show');
+  fg.setAttribute('stroke-dasharray', TIME_RING_CIRC.toFixed(2));
+
+  function tick() {
+    const remaining = Math.max(0, total - videoEl.currentTime);
+    const ratio     = remaining / total;
+    fg.setAttribute('stroke-dashoffset', (TIME_RING_CIRC * (1 - ratio)).toFixed(2));
+    text.textContent = Math.ceil(remaining);
+    if (videoEl.ended || remaining <= 0) return;
+    _timeRingRAF = requestAnimationFrame(tick);
+  }
+  tick();
+}
+
+function stopTimeRing() {
+  if (_timeRingRAF) cancelAnimationFrame(_timeRingRAF);
+  _timeRingRAF = null;
+  document.getElementById('timeRing')?.classList.remove('show');
 }
 
 // ═══ Résultat ════════════════════════════════════════════════════════════════

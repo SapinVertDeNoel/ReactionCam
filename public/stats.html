@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<script>document.documentElement.setAttribute('data-theme',localStorage.getItem('rc-theme')||'dark')</script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Vos statistiques ReactionCam : vues, réactions, évolution mensuelle.">
+<meta name="robots" content="noindex">
+<title>Statistiques · ReactionCam</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg: #0a0a0a; --surface: #111; --surface2: #141414; --border: #1e1e1e;
+  --gold: #c9a84c; --gold-dim: #7a6330;
+  --text: #e8e0d0; --muted: #5a5245; --green: #4a7c59; --red: #c0392b;
+}
+html, body { min-height: 100vh; background: var(--bg); color: var(--text); font-family: 'DM Mono', monospace; font-size: 14px; }
+body::before {
+  content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 0; opacity: 0.35;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.05'/%3E%3C/svg%3E");
+}
+.app { position: relative; z-index: 1; min-height: 100vh; display: flex; flex-direction: column; }
+
+nav {
+  display: flex; align-items: center; justify-content: space-between;
+  height: 60px; padding: 0 48px; border-bottom: 1px solid var(--border);
+  position: sticky; top: 0; background: rgba(10,10,10,0.95);
+  backdrop-filter: blur(8px); z-index: 100;
+}
+.logo { display: inline-flex; align-items: center; gap: 6px; text-decoration: none; }
+.logo span { font-style: italic; }
+.nav-right { display: flex; align-items: center; gap: 12px; }
+.user-name { font-size: 12px; color: var(--muted); letter-spacing: 0.06em; text-decoration: none; }
+.user-name:hover { color: var(--text); }
+.btn-back { background: none; border: 1px solid var(--border); border-radius: 2px; padding: 8px 16px; color: var(--muted); font-family: 'DM Mono', monospace; font-size: 11px; letter-spacing: 0.1em; cursor: pointer; text-decoration: none; transition: all 0.2s; }
+.btn-back:hover { color: var(--text); border-color: var(--muted); }
+
+main { flex: 1; padding: 48px; max-width: 1200px; width: 100%; margin: 0 auto; }
+.page-title { font-family: 'Cormorant Garamond', serif; font-size: 42px; font-weight: 300; line-height: 1; margin-bottom: 8px; }
+.page-title em { font-style: italic; color: var(--gold); }
+.page-sub { font-size: 12px; color: var(--muted); letter-spacing: 0.06em; margin-bottom: 36px; }
+
+/* KPI cards */
+.kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 32px; }
+.kpi {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 4px;
+  padding: 24px 22px; position: relative; overflow: hidden;
+  transition: border-color 0.25s, transform 0.25s;
+}
+.kpi:hover { border-color: var(--gold-dim); transform: translateY(-2px); }
+.kpi::before {
+  content: ''; position: absolute; inset: 0 0 auto 0; height: 2px;
+  background: linear-gradient(90deg, transparent, var(--gold), transparent);
+  opacity: 0; transition: opacity 0.3s;
+}
+.kpi:hover::before { opacity: 0.6; }
+.kpi-label { font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--muted); margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
+.kpi-label svg { opacity: 0.5; }
+.kpi-value {
+  font-family: 'Cormorant Garamond', serif; font-weight: 300;
+  font-size: 44px; line-height: 1; color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+.kpi-value em { font-style: italic; color: var(--gold); }
+.kpi-trend { font-size: 11px; margin-top: 10px; letter-spacing: 0.06em; display: flex; align-items: center; gap: 5px; }
+.kpi-trend.up   { color: var(--green); }
+.kpi-trend.down { color: var(--red); }
+.kpi-trend.neutral { color: var(--muted); }
+.kpi-foot { font-size: 11px; color: var(--muted); margin-top: 10px; letter-spacing: 0.04em; }
+
+/* Section */
+.section { background: var(--surface); border: 1px solid var(--border); border-radius: 4px; padding: 28px; margin-bottom: 24px; }
+.section-title { font-family: 'Cormorant Garamond', serif; font-size: 24px; font-weight: 400; margin-bottom: 4px; }
+.section-title em { font-style: italic; color: var(--gold); }
+.section-sub { font-size: 11px; color: var(--muted); letter-spacing: 0.06em; margin-bottom: 24px; }
+
+/* Chart */
+.chart {
+  display: flex; align-items: flex-end; justify-content: space-between;
+  gap: 12px; height: 220px; padding: 12px 4px 0;
+  border-bottom: 1px solid var(--border);
+}
+.chart-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; height: 100%; min-width: 0; position: relative; }
+.chart-bars { flex: 1; width: 100%; display: flex; align-items: flex-end; justify-content: center; gap: 4px; }
+.chart-bar {
+  flex: 1; max-width: 22px;
+  background: linear-gradient(180deg, var(--gold) 0%, var(--gold-dim) 100%);
+  border-radius: 2px 2px 0 0;
+  min-height: 2px; transition: opacity 0.2s, transform 0.2s;
+  cursor: default; position: relative;
+}
+.chart-bar.reactions {
+  background: linear-gradient(180deg, var(--green) 0%, #2d5238 100%);
+}
+.chart-bar:hover { opacity: 0.85; transform: translateY(-1px); }
+.chart-bar-tip {
+  position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%) translateY(-4px);
+  background: #000; border: 1px solid var(--border); border-radius: 2px;
+  padding: 4px 8px; font-size: 10px; letter-spacing: 0.04em; color: var(--text);
+  white-space: nowrap; opacity: 0; pointer-events: none; transition: opacity 0.15s;
+}
+.chart-bar:hover .chart-bar-tip { opacity: 1; }
+.chart-label { font-size: 10px; color: var(--muted); letter-spacing: 0.1em; text-transform: uppercase; padding-top: 8px; }
+.chart-legend { display: flex; gap: 20px; margin-top: 16px; justify-content: center; font-size: 11px; color: var(--muted); letter-spacing: 0.06em; }
+.legend-dot { display: inline-block; width: 8px; height: 8px; border-radius: 1px; margin-right: 6px; vertical-align: middle; }
+
+/* Top videos */
+.top-list { display: flex; flex-direction: column; gap: 8px; }
+.top-row {
+  display: grid; grid-template-columns: 28px 1fr auto auto; gap: 16px; align-items: center;
+  padding: 14px 16px; background: var(--surface2); border: 1px solid var(--border); border-radius: 3px;
+  transition: border-color 0.2s;
+}
+.top-row:hover { border-color: var(--gold-dim); }
+.top-rank { font-family: 'Cormorant Garamond', serif; font-style: italic; font-size: 22px; color: var(--gold); }
+.top-name { font-size: 12px; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.top-name-date { font-size: 10px; color: var(--muted); letter-spacing: 0.06em; margin-top: 2px; }
+.top-stat { display: flex; flex-direction: column; align-items: flex-end; min-width: 60px; }
+.top-stat-val { font-size: 14px; color: var(--gold); font-variant-numeric: tabular-nums; }
+.top-stat-lbl { font-size: 9px; color: var(--muted); letter-spacing: 0.14em; text-transform: uppercase; }
+
+/* Empty */
+.empty { text-align: center; padding: 60px 20px; }
+.empty h3 { font-family: 'Cormorant Garamond', serif; font-size: 22px; font-weight: 300; margin-bottom: 6px; }
+.empty p { font-size: 12px; color: var(--muted); margin-bottom: 18px; }
+.empty .btn-upload { display: inline-flex; align-items: center; gap: 8px; background: var(--gold); color: #0a0a0a; padding: 10px 20px; border-radius: 2px; text-decoration: none; font-size: 11px; letter-spacing: 0.15em; text-transform: uppercase; }
+
+.spinner { width: 32px; height: 32px; border: 2px solid var(--border); border-top-color: var(--gold); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 80px auto; }
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+.app { animation: fadeIn 0.4s ease; }
+
+@media (max-width: 900px) {
+  .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 600px) {
+  nav { height: 62px; padding: 0 18px; }
+  main { padding: 24px 16px; }
+  .page-title { font-size: 32px; }
+  .kpi-value { font-size: 34px; }
+  .section { padding: 20px; }
+  .chart { height: 170px; gap: 6px; }
+  .top-row { grid-template-columns: 22px 1fr auto; }
+  .top-row .top-stat:nth-of-type(2) { display: none; }
+}
+</style>
+<link rel="stylesheet" href="/theme.css">
+<script src="/logo-theme.js" defer></script>
+</head>
+<body>
+<div class="app">
+  <nav>
+    <a class="logo" href="/" aria-label="ReactionCam"><svg class="logo-mark" viewBox="0 0 32 32" width="22" height="22" aria-hidden="true" focusable="false"><circle cx="16" cy="16" r="14" fill="none" stroke="currentColor" stroke-width="1.6"/><circle cx="16" cy="16" r="5" fill="currentColor"/></svg><span class="logo-text">Reaction<em>Cam</em></span></a>
+    <div class="nav-right">
+      <a class="user-name" href="/account" id="userName">…</a>
+      <a href="/dashboard" class="btn-back">← Dashboard</a>
+    </div>
+  </nav>
+
+  <main>
+    <div class="page-title">Tes <em>statistiques</em></div>
+    <div class="page-sub" id="pageSub">Vue d'ensemble de tes performances</div>
+
+    <div id="content"><div class="spinner"></div></div>
+  </main>
+</div>
+
+<script>
+function escHtml(s) {
+  if (!s) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#x27;');
+}
+function fmtNum(n) {
+  if (n >= 1_000_000) return (n / 1_000_000).toFixed(1).replace(/\.0$/, '') + 'M';
+  if (n >= 1_000)     return (n / 1_000).toFixed(1).replace(/\.0$/, '') + 'k';
+  return String(n);
+}
+function fmtPct(p) {
+  if (p > 0) return '+' + p + '%';
+  if (p < 0) return p + '%';
+  return '0%';
+}
+function trendClass(p) { return p > 0 ? 'up' : (p < 0 ? 'down' : 'neutral'); }
+function trendArrow(p) { return p > 0 ? '▲' : (p < 0 ? '▼' : '·'); }
+
+async function init() {
+  const meR = await fetch('/api/auth/me');
+  if (!meR.ok) { location.href = '/login'; return; }
+  const me = await meR.json();
+  document.getElementById('userName').textContent = me.name;
+
+  const r = await fetch('/api/stats');
+  if (!r.ok) {
+    document.getElementById('content').innerHTML = '<div class="empty"><h3>Erreur</h3><p>Impossible de charger les statistiques.</p></div>';
+    return;
+  }
+  const data = await r.json();
+  render(data);
+}
+
+function render(data) {
+  const { totals, evolution, monthly, topVideos } = data;
+
+  if (totals.videos === 0) {
+    document.getElementById('content').innerHTML = `
+      <div class="empty">
+        <h3>Aucune vidéo pour l'instant</h3>
+        <p>Tes statistiques apparaîtront ici dès ta première vidéo uploadée.</p>
+        <a href="/" class="btn-upload">Uploader une vidéo</a>
+      </div>`;
+    document.getElementById('pageSub').textContent = '';
+    return;
+  }
+
+  const maxBar = Math.max(1, ...monthly.map(m => Math.max(m.views, m.reactions)));
+
+  const chartCols = monthly.map(m => `
+    <div class="chart-col">
+      <div class="chart-bars">
+        <div class="chart-bar" style="height:${(m.views / maxBar) * 100}%;" title="${m.views} vues">
+          <div class="chart-bar-tip">${m.views} vues</div>
+        </div>
+        <div class="chart-bar reactions" style="height:${(m.reactions / maxBar) * 100}%;" title="${m.reactions} réactions">
+          <div class="chart-bar-tip">${m.reactions} réactions</div>
+        </div>
+      </div>
+      <div class="chart-label">${escHtml(m.label)}</div>
+    </div>
+  `).join('');
+
+  const topRows = topVideos.length === 0
+    ? '<div class="empty" style="padding:30px;"><p>Pas encore de vues ni de réactions sur tes vidéos.</p></div>'
+    : topVideos.map((v, i) => `
+        <div class="top-row">
+          <div class="top-rank">${i + 1}</div>
+          <div>
+            <div class="top-name">${escHtml(v.name)}</div>
+            <div class="top-name-date">${new Date(v.createdAt).toLocaleDateString('fr-FR', { day:'numeric', month:'short', year:'numeric' })}</div>
+          </div>
+          <div class="top-stat">
+            <div class="top-stat-val">${fmtNum(v.views)}</div>
+            <div class="top-stat-lbl">vues</div>
+          </div>
+          <div class="top-stat">
+            <div class="top-stat-val">${fmtNum(v.reactions)}</div>
+            <div class="top-stat-lbl">réact.</div>
+          </div>
+        </div>
+      `).join('');
+
+  document.getElementById('content').innerHTML = `
+    <div class="kpi-grid">
+      <div class="kpi">
+        <div class="kpi-label">
+          <svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M1 6s2-4 5-4 5 4 5 4-2 4-5 4-5-4-5-4z"/><circle cx="6" cy="6" r="1.5"/></svg>
+          Vues totales
+        </div>
+        <div class="kpi-value">${fmtNum(totals.views)}</div>
+        <div class="kpi-trend ${trendClass(evolution.viewsPct)}">${trendArrow(evolution.viewsPct)} ${fmtPct(evolution.viewsPct)} ce mois</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-label">
+          <svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="6" cy="6" r="5"/><path d="M4 5h.01M8 5h.01M4 8c.5.6 1.2 1 2 1s1.5-.4 2-1"/></svg>
+          Réactions
+        </div>
+        <div class="kpi-value">${fmtNum(totals.reactions)}</div>
+        <div class="kpi-trend ${trendClass(evolution.reactionsPct)}">${trendArrow(evolution.reactionsPct)} ${fmtPct(evolution.reactionsPct)} ce mois</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-label">
+          <svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M2 10l3-5 2 3 3-6"/></svg>
+          Taux de réaction
+        </div>
+        <div class="kpi-value">${totals.conversion}<em>%</em></div>
+        <div class="kpi-foot">${fmtNum(totals.reactions)} / ${fmtNum(totals.views)} vues</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-label">
+          <svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="6" cy="6" r="5"/><path d="M6 3v3l2 1.5"/></svg>
+          7 derniers jours
+        </div>
+        <div class="kpi-value">${fmtNum(totals.views7d)}</div>
+        <div class="kpi-foot">${fmtNum(totals.reactions7d)} réactions · ${totals.videos} vidéo${totals.videos > 1 ? 's' : ''}</div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Évolution sur <em>6 mois</em></div>
+      <div class="section-sub">Vues et réactions par mois</div>
+      <div class="chart">${chartCols}</div>
+      <div class="chart-legend">
+        <span><span class="legend-dot" style="background:var(--gold);"></span>Vues</span>
+        <span><span class="legend-dot" style="background:var(--green);"></span>Réactions</span>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Tes <em>meilleures</em> vidéos</div>
+      <div class="section-sub">Top 5 par engagement (vues + 3× réactions)</div>
+      <div class="top-list">${topRows}</div>
+    </div>
+  `;
+}
+
+init();
+</script>
+</body>
+</html>

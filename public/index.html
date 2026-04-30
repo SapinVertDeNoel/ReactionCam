@@ -172,6 +172,34 @@
 
   #fileInput { display: none; }
 
+  /* ── Visibilité ── */
+  .visibility-panel {
+    width: 100%; max-width: 560px;
+    margin: 0 auto 14px; position: relative; z-index: 1;
+  }
+  .vis-tabs { display: flex; gap: 0; background: var(--surface); border: 1px solid var(--border); border-radius: 3px; overflow: hidden; }
+  .vis-tab {
+    flex: 1; padding: 12px 16px; background: none; border: none; cursor: pointer;
+    font-family: 'DM Mono', monospace; font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase;
+    color: var(--muted); transition: background 0.2s, color 0.2s;
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  }
+  .vis-tab + .vis-tab { border-left: 1px solid var(--border); }
+  .vis-tab:hover { color: var(--text); }
+  .vis-tab.active { background: rgba(201,168,76,0.08); color: var(--gold); }
+  .vis-tab svg { width: 12px; height: 12px; opacity: 0.75; }
+
+  .private-config { display: none; margin-top: 12px; padding: 16px; background: var(--surface); border: 1px solid var(--border); border-radius: 3px; }
+  .private-config.show { display: block; }
+  .private-config p { font-size: 11px; color: var(--muted); letter-spacing: 0.04em; margin-bottom: 10px; line-height: 1.5; }
+  .email-chips { display: flex; flex-wrap: wrap; gap: 6px; padding: 8px; background: #0d0d0d; border: 1px solid var(--border); border-radius: 2px; min-height: 42px; align-items: center; }
+  .email-chip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 8px; background: rgba(201,168,76,0.1); border: 1px solid var(--gold-dim); border-radius: 2px; color: var(--gold); font-size: 11px; }
+  .email-chip button { background: none; border: none; color: var(--gold); cursor: pointer; font-size: 13px; padding: 0; line-height: 1; }
+  .email-chip button:hover { color: var(--red); }
+  .email-input { flex: 1; min-width: 140px; background: none; border: none; outline: none; color: var(--text); font-family: 'DM Mono', monospace; font-size: 12px; padding: 4px; }
+  .email-input::placeholder { color: var(--muted); opacity: 0.6; }
+  .email-hint { font-size: 10px; color: #3a3530; margin-top: 6px; letter-spacing: 0.04em; }
+
   /* ── Progress / Result ── */
   .upload-progress {
     display: none;
@@ -421,6 +449,26 @@
   <h1 data-i18n-html="index.h1">Partage une vidéo.<br><em>Capture la réaction.</em></h1>
   <p class="subtitle" data-i18n="index.subtitle">Génère un lien · Le spectateur est filmé · Tu récupères sa réaction</p>
 
+  <div class="visibility-panel" id="visibilityPanel">
+    <div class="vis-tabs" role="tablist">
+      <button type="button" class="vis-tab active" data-vis="public" role="tab">
+        <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="6" cy="6" r="5"/><path d="M1 6h10M6 1c2 1.5 2 8.5 0 10M6 1c-2 1.5-2 8.5 0 10"/></svg>
+        Public
+      </button>
+      <button type="button" class="vis-tab" data-vis="private" role="tab">
+        <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="2.5" y="5.5" width="7" height="5" rx="1"/><path d="M4 5.5V4a2 2 0 0 1 4 0v1.5"/></svg>
+        Privé
+      </button>
+    </div>
+    <div class="private-config" id="privateConfig">
+      <p>Seules les personnes que tu listes ici pourront regarder cette vidéo. Elles recevront un email d'invitation et devront se connecter à ReactionCam avec cette adresse exacte.</p>
+      <div class="email-chips" id="emailChips">
+        <input type="email" class="email-input" id="emailInput" placeholder="email@exemple.com puis Entrée">
+      </div>
+      <div class="email-hint">Astuce : tu peux coller plusieurs emails séparés par des virgules.</div>
+    </div>
+  </div>
+
   <div class="drop-zone" id="dropZone">
     <svg class="drop-icon" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.5">
       <rect x="6" y="6" width="36" height="36" rx="4"/>
@@ -539,8 +587,81 @@ function handleFile(file) {
     showError(window.__('index.err.size'));
     return;
   }
+  if (_visibility === 'private' && _allowedEmails.length === 0) {
+    showError('Ajoute au moins un email pour une vidéo privée.');
+    return;
+  }
   uploadFile(file);
 }
+
+// ── Visibilité ──────────────────────────────────────────────────────────────
+let _visibility = 'public';
+let _allowedEmails = [];
+const EMAIL_RE = /^[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$/i;
+
+function setupVisibility() {
+  const tabs    = document.querySelectorAll('.vis-tab');
+  const config  = document.getElementById('privateConfig');
+  const chipsEl = document.getElementById('emailChips');
+  const input   = document.getElementById('emailInput');
+
+  tabs.forEach(t => t.addEventListener('click', () => {
+    tabs.forEach(x => x.classList.remove('active'));
+    t.classList.add('active');
+    _visibility = t.dataset.vis;
+    config.classList.toggle('show', _visibility === 'private');
+  }));
+
+  function renderChips() {
+    chipsEl.querySelectorAll('.email-chip').forEach(el => el.remove());
+    _allowedEmails.forEach(email => {
+      const chip = document.createElement('span');
+      chip.className = 'email-chip';
+      chip.innerHTML = `<span></span><button type="button" aria-label="Retirer">×</button>`;
+      chip.querySelector('span').textContent = email;
+      chip.querySelector('button').addEventListener('click', () => {
+        _allowedEmails = _allowedEmails.filter(e => e !== email);
+        renderChips();
+      });
+      chipsEl.insertBefore(chip, input);
+    });
+  }
+
+  function tryAdd(text) {
+    const parts = text.split(/[\s,;]+/).map(s => s.trim().toLowerCase()).filter(Boolean);
+    let added = 0;
+    for (const e of parts) {
+      if (EMAIL_RE.test(e) && !_allowedEmails.includes(e) && _allowedEmails.length < 50) {
+        _allowedEmails.push(e);
+        added++;
+      }
+    }
+    if (added) renderChips();
+    return added > 0;
+  }
+
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Enter' || e.key === ',' || e.key === ';') {
+      e.preventDefault();
+      if (tryAdd(input.value)) input.value = '';
+    } else if (e.key === 'Backspace' && !input.value && _allowedEmails.length) {
+      _allowedEmails.pop();
+      renderChips();
+    }
+  });
+  input.addEventListener('blur', () => {
+    if (tryAdd(input.value)) input.value = '';
+  });
+  input.addEventListener('paste', e => {
+    const text = (e.clipboardData || window.clipboardData).getData('text');
+    if (text && /[,\s;]/.test(text)) {
+      e.preventDefault();
+      tryAdd(text);
+      input.value = '';
+    }
+  });
+}
+setupVisibility();
 
 function uploadFile(file) {
   errorMsg.style.display = 'none';
@@ -549,6 +670,10 @@ function uploadFile(file) {
 
   const formData = new FormData();
   formData.append('video', file);
+  formData.append('visibility', _visibility);
+  if (_visibility === 'private') {
+    formData.append('allowedEmails', _allowedEmails.join(','));
+  }
 
   const xhr = new XMLHttpRequest();
 
@@ -563,7 +688,7 @@ function uploadFile(file) {
   xhr.addEventListener('load', () => {
     if (xhr.status === 200) {
       const data = JSON.parse(xhr.responseText);
-      showResult(data.link);
+      showResult(data.link, data);
     } else if (xhr.status === 401) {
       uploadProgress.style.display = 'none';
       dropZone.style.display = '';
@@ -599,10 +724,22 @@ function uploadFile(file) {
   xhr.send(formData);
 }
 
-function showResult(link) {
+function showResult(link, data) {
   uploadProgress.style.display = 'none';
   resultBox.style.display = 'block';
+  document.getElementById('visibilityPanel').style.display = 'none';
   linkInput.value = link;
+
+  let banner = document.getElementById('privateBanner');
+  if (banner) banner.remove();
+  if (data?.visibility === 'private' && Array.isArray(data.allowedEmails) && data.allowedEmails.length) {
+    banner = document.createElement('div');
+    banner.id = 'privateBanner';
+    banner.style.cssText = 'margin-top:14px;padding:14px 16px;background:rgba(201,168,76,0.06);border:1px solid var(--gold-dim);border-radius:3px;font-size:11px;color:var(--text);letter-spacing:0.04em;line-height:1.6;';
+    const list = data.allowedEmails.map(e => `<span style="display:inline-block;padding:2px 8px;margin:2px 4px 2px 0;background:rgba(201,168,76,0.1);border:1px solid var(--gold-dim);border-radius:2px;color:var(--gold);">${e.replace(/[<>&"']/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;',"'":'&#x27;'}[c]))}</span>`).join('');
+    banner.innerHTML = `🔒 <strong style="color:var(--gold);">Vidéo privée</strong> — invitation envoyée à :<div style="margin-top:8px;">${list}</div>`;
+    resultBox.appendChild(banner);
+  }
 }
 
 function showError(msg, isHtml = false) {
@@ -625,8 +762,17 @@ copyBtn.addEventListener('click', () => {
 uploadAnother.addEventListener('click', () => {
   resultBox.style.display = 'none';
   dropZone.style.display = '';
+  document.getElementById('visibilityPanel').style.display = '';
+  document.getElementById('privateBanner')?.remove();
   fileInput.value = '';
   progressBar.style.width = '0%';
+  // Reset visibility state
+  _visibility = 'public';
+  _allowedEmails = [];
+  document.querySelectorAll('.vis-tab').forEach(t => t.classList.toggle('active', t.dataset.vis === 'public'));
+  document.getElementById('privateConfig').classList.remove('show');
+  document.getElementById('emailChips').querySelectorAll('.email-chip').forEach(c => c.remove());
+  document.getElementById('emailInput').value = '';
 });
 </script>
 </body>

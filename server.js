@@ -80,21 +80,41 @@ const User = mongoose.model('User', new mongoose.Schema({
 }));
 
 const Video = mongoose.model('Video', new mongoose.Schema({
-  userId:       { type: mongoose.Schema.Types.ObjectId, required: true, index: true },
-  cloudinaryId: { type: String, required: true },
-  url:          { type: String, required: true },
-  originalName: String,
-  size:         Number,
-  expiresAt:    { type: Date, default: null, index: true },
-  createdAt:    { type: Date, default: Date.now }
+  userId:        { type: mongoose.Schema.Types.ObjectId, required: true, index: true },
+  cloudinaryId:  { type: String, required: true },
+  url:           { type: String, required: true },
+  originalName:  String,
+  size:          Number,
+  visibility:    { type: String, enum: ['public', 'private'], default: 'public', index: true },
+  allowedEmails: { type: [String], default: [], index: true },
+  expiresAt:     { type: Date, default: null, index: true },
+  createdAt:     { type: Date, default: Date.now }
 }));
 
 const Reaction = mongoose.model('Reaction', new mongoose.Schema({
-  videoId:      { type: mongoose.Schema.Types.ObjectId, required: true, index: true },
-  viewerName:   String,
-  cloudinaryId: { type: String, required: true },
-  url:          { type: String, required: true },
-  createdAt:    { type: Date, default: Date.now }
+  videoId:       { type: mongoose.Schema.Types.ObjectId, required: true, index: true },
+  viewerUserId:  { type: mongoose.Schema.Types.ObjectId, default: null, index: true },
+  viewerName:    String,
+  cloudinaryId:  { type: String, required: true },
+  url:           { type: String, required: true },
+  createdAt:     { type: Date, default: Date.now }
+}));
+
+const View = mongoose.model('View', new mongoose.Schema({
+  videoId:   { type: mongoose.Schema.Types.ObjectId, required: true, index: true },
+  ipHash:    { type: String, index: true },
+  createdAt: { type: Date, default: Date.now, index: true }
+}));
+
+const Notification = mongoose.model('Notification', new mongoose.Schema({
+  userId:     { type: mongoose.Schema.Types.ObjectId, required: true, index: true },
+  type:       { type: String, default: 'reaction' },
+  videoId:    { type: mongoose.Schema.Types.ObjectId },
+  reactionId: { type: mongoose.Schema.Types.ObjectId },
+  viewerName: String,
+  videoTitle: String,
+  read:       { type: Boolean, default: false, index: true },
+  createdAt:  { type: Date, default: Date.now, index: true }
 }));
 
 // ── App ───────────────────────────────────────────────────────────────────────
@@ -240,6 +260,28 @@ app.use(express.static(path.join(__dirname, 'public')));
 function requireAuth(req, res, next) {
   if (!req.session.userId) return res.status(401).json({ error: 'Non connecté' });
   next();
+}
+
+// Renvoie 'ok' | 'login' | 'forbidden' selon que la session peut voir cette vidéo.
+async function checkVideoAccess(req, video) {
+  if (video.visibility !== 'private') return 'ok';
+  if (!req.session.userId) return 'login';
+  if (req.session.userId.toString() === video.userId.toString()) return 'ok';
+  if (!Array.isArray(video.allowedEmails) || video.allowedEmails.length === 0) return 'forbidden';
+  const user = await User.findById(req.session.userId).select('email').lean();
+  if (!user?.email) return 'forbidden';
+  return video.allowedEmails.includes(user.email.toLowerCase()) ? 'ok' : 'forbidden';
+}
+
+function parseEmailList(input) {
+  if (!input) return [];
+  const raw = Array.isArray(input) ? input.join(',') : String(input);
+  const emailRe = /^[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$/i;
+  return [...new Set(
+    raw.split(/[\s,;]+/)
+       .map(e => e.trim().toLowerCase())
+       .filter(e => emailRe.test(e))
+  )].slice(0, 50);
 }
 
 // ── Admin emails & guards ─────────────────────────────────────────────────────
@@ -500,15 +542,54 @@ app.post('/upload', requireAuth, (req, res) => {
         }
       }
 
+      const visibility   = req.body?.visibility === 'private' ? 'private' : 'public';
+      const allowedEmails = visibility === 'private' ? parseEmailList(req.body?.allowedEmails) : [];
+
+      if (visibility === 'private' && allowedEmails.length === 0) {
+        await cloudinary.uploader.destroy(req.file.filename, { resource_type: 'video' });
+        return res.status(400).json({ error: 'Une vidéo privée doit avoir au moins un email autorisé.' });
+      }
+
       const video = await Video.create({
-        userId:       req.session.userId,
-        cloudinaryId: req.file.filename,
-        url:          req.file.path,
-        originalName: req.file.originalname,
-        size:         req.file.size,
-        expiresAt:    expiresAtForPlan(user?.plan || 'free')
+        userId:        req.session.userId,
+        cloudinaryId:  req.file.filename,
+        url:           req.file.path,
+        originalName:  req.file.originalname,
+        size:          req.file.size,
+        visibility,
+        allowedEmails,
+        expiresAt:     expiresAtForPlan(user?.plan || 'free')
       });
-      res.json({ id: video._id, link: `${req.protocol}://${req.get('host')}/watch/${video._id}` });
+
+      const link = `${req.protocol}://${req.get('host')}/watch/${video._id}`;
+      res.json({ id: video._id, link, visibility, allowedEmails });
+
+      // Invitations (non-bloquant)
+      if (resend && visibility === 'private' && allowedEmails.length > 0) {
+        const senderName  = user?.name || 'Quelqu’un';
+        const videoTitle  = (req.file.originalname || 'une vidéo').slice(0, 60);
+        const baseUrl     = `${req.protocol}://${req.get('host')}`;
+        for (const email of allowedEmails) {
+          resend.emails.send({
+            from:    'ReactionCam <noreply@reaction-cam.com>',
+            to:      email,
+            subject: `${senderName} t'a partagé une vidéo privée`,
+            html: `<!DOCTYPE html><html><body style="margin:0;padding:0;background:#0a0a0a;font-family:'Courier New',monospace;color:#e8e0d0;">
+<table width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:40px 20px;">
+<table width="480" cellpadding="0" cellspacing="0" style="background:#111;border:1px solid #1e1e1e;border-radius:4px;">
+  <tr><td style="padding:40px 36px;">
+    <p style="font-size:22px;font-weight:300;letter-spacing:0.12em;color:#c9a84c;margin:0 0 24px;">Reaction<em>Cam</em></p>
+    <p style="font-size:14px;margin:0 0 12px;">Tu as reçu une vidéo privée 🎬</p>
+    <p style="font-size:13px;color:#a09080;margin:0 0 18px;line-height:1.6;"><strong style="color:#e8e0d0;">${senderName}</strong> t'a partagé <em>${videoTitle}</em>.</p>
+    <p style="font-size:12px;color:#a09080;margin:0 0 28px;line-height:1.6;">Cette vidéo est <strong style="color:#c9a84c;">privée</strong>. Pour la regarder, tu dois te connecter à ReactionCam avec cette adresse email (<strong style="color:#e8e0d0;">${email}</strong>). Si tu n'as pas encore de compte, crée-le avec cette même adresse.</p>
+    <a href="${baseUrl}/watch/${video._id}" style="display:inline-block;padding:14px 28px;background:#c9a84c;color:#0a0a0a;text-decoration:none;font-size:11px;letter-spacing:0.18em;text-transform:uppercase;border-radius:2px;">Regarder la vidéo</a>
+    <p style="font-size:11px;color:#5a5245;margin:28px 0 0;line-height:1.6;">Tu reçois cet email parce que ${senderName} t'a explicitement ajouté à la liste d'accès de cette vidéo.</p>
+  </td></tr>
+</table>
+</td></tr></table></body></html>`,
+          }).catch(e => console.error('[INVITE EMAIL]', e.message));
+        }
+      }
     } catch (e) {
       console.error('[UPLOAD DB]', e.message);
       res.status(500).json({ error: 'Erreur base de données' });
@@ -516,13 +597,68 @@ app.post('/upload', requireAuth, (req, res) => {
   });
 });
 
-app.get('/api/video/:id', async (req, res) => {
+app.get('/api/video/:id/exists', async (req, res) => {
   try {
-    const video = await Video.findById(req.params.id);
+    const video = await Video.findById(req.params.id).select('_id userId visibility allowedEmails').lean();
     if (!video) return res.status(404).json({ error: 'Vidéo introuvable' });
-    res.json({ url: video.url });
+
+    const access = await checkVideoAccess(req, video);
+    if (access === 'login')     return res.status(401).json({ error: 'Connexion requise', visibility: 'private' });
+    if (access === 'forbidden') return res.status(403).json({ error: 'Accès refusé', visibility: 'private' });
+
+    // Track de vue (dédupliqué : 1 par IP / 24h / vidéo, et on n'enregistre pas la vue du propriétaire)
+    if (req.session.userId?.toString() !== video.userId.toString()) {
+      const ip = (req.headers['x-forwarded-for']?.split(',')[0] || req.ip || '').trim();
+      const ipHash = crypto.createHash('sha256').update(ip + ':' + video._id).digest('hex').slice(0, 32);
+      const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
+      const already = await View.exists({ videoId: video._id, ipHash, createdAt: { $gte: since } });
+      if (!already) {
+        View.create({ videoId: video._id, ipHash }).catch(e => console.error('[VIEW]', e.message));
+      }
+    }
+
+    res.json({ ok: true });
   } catch {
     res.status(404).json({ error: 'Vidéo introuvable' });
+  }
+});
+
+app.get('/api/video/:id', async (req, res) => {
+  let video;
+  try {
+    video = await Video.findById(req.params.id);
+  } catch {
+    return res.status(404).end();
+  }
+  if (!video) return res.status(404).end();
+
+  const access = await checkVideoAccess(req, video);
+  if (access !== 'ok') return res.status(access === 'login' ? 401 : 403).end();
+
+  try {
+    const headers = {};
+    if (req.headers.range) headers.range = req.headers.range;
+
+    const upstream = await fetch(video.url, { method: req.method, headers });
+    if (upstream.status >= 400) return res.status(upstream.status).end();
+
+    res.status(upstream.status);
+    for (const h of ['content-type', 'content-length', 'content-range', 'accept-ranges', 'last-modified', 'etag', 'cache-control']) {
+      const v = upstream.headers.get(h);
+      if (v) res.setHeader(h, v);
+    }
+
+    if (req.method === 'HEAD' || !upstream.body) return res.end();
+
+    const { Readable } = require('stream');
+    const stream = Readable.fromWeb(upstream.body);
+    stream.on('error', () => res.destroy());
+    req.on('close', () => stream.destroy());
+    stream.pipe(res);
+  } catch (e) {
+    console.error('[VIDEO PROXY]', e.message);
+    if (!res.headersSent) res.status(502).end();
+    else res.destroy();
   }
 });
 
@@ -541,6 +677,8 @@ app.get('/api/dashboard', requireAuth, async (req, res) => {
         size:         v.size,
         createdAt:    v.createdAt,
         expiresAt:    v.expiresAt,
+        visibility:   v.visibility || 'public',
+        allowedEmails: v.allowedEmails || [],
         reactions:    reactions.map(r => ({
           id:         r._id,
           viewerName: r.viewerName || 'Anonyme',
@@ -565,6 +703,216 @@ app.get('/api/dashboard', requireAuth, async (req, res) => {
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
+// STATISTIQUES
+// ═══════════════════════════════════════════════════════════════════════════════
+
+app.get('/api/stats', requireAuth, async (req, res) => {
+  try {
+    const userId = new mongoose.Types.ObjectId(req.session.userId);
+    const videos = await Video.find({ userId }).select('_id originalName createdAt').lean();
+    const videoIds = videos.map(v => v._id);
+
+    // Compteurs globaux
+    const [totalViews, totalReactions] = await Promise.all([
+      View.countDocuments({ videoId: { $in: videoIds } }),
+      Reaction.countDocuments({ videoId: { $in: videoIds } })
+    ]);
+
+    // Évolution sur 6 derniers mois (mois courant inclus)
+    const now = new Date();
+    const start = new Date(now.getFullYear(), now.getMonth() - 5, 1);
+
+    const monthBuckets = [];
+    for (let i = 0; i < 6; i++) {
+      const d = new Date(start.getFullYear(), start.getMonth() + i, 1);
+      monthBuckets.push({
+        key:   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`,
+        label: d.toLocaleDateString('fr-FR', { month: 'short' }),
+        views: 0,
+        reactions: 0
+      });
+    }
+    const bucketIdx = Object.fromEntries(monthBuckets.map((b, i) => [b.key, i]));
+
+    const aggMonthly = async (Model) => Model.aggregate([
+      { $match: { videoId: { $in: videoIds }, createdAt: { $gte: start } } },
+      { $group: {
+          _id: { y: { $year: '$createdAt' }, m: { $month: '$createdAt' } },
+          n: { $sum: 1 }
+      }}
+    ]);
+
+    const [viewsByMonth, reactionsByMonth] = await Promise.all([
+      aggMonthly(View),
+      aggMonthly(Reaction)
+    ]);
+
+    for (const r of viewsByMonth) {
+      const k = `${r._id.y}-${String(r._id.m).padStart(2, '0')}`;
+      if (bucketIdx[k] !== undefined) monthBuckets[bucketIdx[k]].views = r.n;
+    }
+    for (const r of reactionsByMonth) {
+      const k = `${r._id.y}-${String(r._id.m).padStart(2, '0')}`;
+      if (bucketIdx[k] !== undefined) monthBuckets[bucketIdx[k]].reactions = r.n;
+    }
+
+    // Évolution du mois courant vs précédent
+    const last  = monthBuckets[monthBuckets.length - 1];
+    const prev  = monthBuckets[monthBuckets.length - 2] || { views: 0, reactions: 0 };
+    const pctChange = (cur, old) => old === 0 ? (cur > 0 ? 100 : 0) : Math.round(((cur - old) / old) * 100);
+
+    // Top 5 vidéos
+    const perVideoViews     = await View.aggregate([
+      { $match: { videoId: { $in: videoIds } } },
+      { $group: { _id: '$videoId', n: { $sum: 1 } } }
+    ]);
+    const perVideoReactions = await Reaction.aggregate([
+      { $match: { videoId: { $in: videoIds } } },
+      { $group: { _id: '$videoId', n: { $sum: 1 } } }
+    ]);
+    const viewsMap     = Object.fromEntries(perVideoViews.map(r => [String(r._id), r.n]));
+    const reactionsMap = Object.fromEntries(perVideoReactions.map(r => [String(r._id), r.n]));
+
+    const topVideos = videos
+      .map(v => ({
+        id:        v._id,
+        name:      v.originalName || 'Sans nom',
+        createdAt: v.createdAt,
+        views:     viewsMap[String(v._id)] || 0,
+        reactions: reactionsMap[String(v._id)] || 0
+      }))
+      .sort((a, b) => (b.views + b.reactions * 3) - (a.views + a.reactions * 3))
+      .slice(0, 5);
+
+    // Vues 7 derniers jours
+    const last7 = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    const [views7d, reactions7d] = await Promise.all([
+      View.countDocuments({ videoId: { $in: videoIds }, createdAt: { $gte: last7 } }),
+      Reaction.countDocuments({ videoId: { $in: videoIds }, createdAt: { $gte: last7 } })
+    ]);
+
+    const conversionRate = totalViews > 0
+      ? Math.round((totalReactions / totalViews) * 1000) / 10
+      : 0;
+
+    res.json({
+      totals: {
+        videos:        videos.length,
+        views:         totalViews,
+        reactions:     totalReactions,
+        conversion:    conversionRate,
+        views7d,
+        reactions7d
+      },
+      evolution: {
+        viewsPct:     pctChange(last.views, prev.views),
+        reactionsPct: pctChange(last.reactions, prev.reactions),
+        currentMonth: { views: last.views, reactions: last.reactions }
+      },
+      monthly: monthBuckets,
+      topVideos
+    });
+  } catch (e) {
+    console.error('[STATS]', e.message);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+app.get('/api/my-reactions', requireAuth, async (req, res) => {
+  try {
+    const reactions = await Reaction.find({ viewerUserId: req.session.userId })
+      .sort({ createdAt: -1 })
+      .limit(200)
+      .lean();
+
+    const videoIds = [...new Set(reactions.map(r => String(r.videoId)))];
+    const videos = await Video.find({ _id: { $in: videoIds } })
+      .select('_id originalName userId')
+      .lean();
+    const ownerIds = [...new Set(videos.map(v => String(v.userId)))];
+    const owners = await User.find({ _id: { $in: ownerIds } })
+      .select('_id name')
+      .lean();
+
+    const videoMap = Object.fromEntries(videos.map(v => [String(v._id), v]));
+    const ownerMap = Object.fromEntries(owners.map(o => [String(o._id), o.name]));
+
+    res.json({
+      reactions: reactions.map(r => {
+        const v = videoMap[String(r.videoId)];
+        return {
+          id:         r._id,
+          url:        r.url,
+          createdAt:  r.createdAt,
+          viewerName: r.viewerName || 'Anonyme',
+          video: v ? {
+            id:           v._id,
+            originalName: v.originalName || '',
+            ownerName:    ownerMap[String(v.userId)] || 'Inconnu',
+            available:    true
+          } : { available: false }
+        };
+      })
+    });
+  } catch (e) {
+    console.error('[MY REACTIONS]', e.message);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+app.delete('/api/my-reactions/:id', requireAuth, async (req, res) => {
+  try {
+    const reaction = await Reaction.findOne({ _id: req.params.id, viewerUserId: req.session.userId });
+    if (!reaction) return res.status(404).json({ error: 'Réaction introuvable' });
+    await cloudinary.uploader.destroy(reaction.cloudinaryId, { resource_type: 'video' }).catch(() => {});
+    await Reaction.deleteOne({ _id: reaction._id });
+    res.json({ ok: true });
+  } catch (e) {
+    console.error('[DELETE MY REACTION]', e.message);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// NOTIFICATIONS
+// ═══════════════════════════════════════════════════════════════════════════════
+
+app.get('/api/notifications', requireAuth, async (req, res) => {
+  try {
+    const [items, unread] = await Promise.all([
+      Notification.find({ userId: req.session.userId }).sort({ createdAt: -1 }).limit(30).lean(),
+      Notification.countDocuments({ userId: req.session.userId, read: false })
+    ]);
+    res.json({
+      unread,
+      items: items.map(n => ({
+        id:         n._id,
+        type:       n.type,
+        videoId:    n.videoId,
+        reactionId: n.reactionId,
+        viewerName: n.viewerName || 'Anonyme',
+        videoTitle: n.videoTitle || '',
+        read:       n.read,
+        createdAt:  n.createdAt
+      }))
+    });
+  } catch (e) {
+    console.error('[NOTIF LIST]', e.message);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+app.post('/api/notifications/read', requireAuth, async (req, res) => {
+  try {
+    await Notification.updateMany({ userId: req.session.userId, read: false }, { $set: { read: true } });
+    res.json({ ok: true });
+  } catch (e) {
+    console.error('[NOTIF READ]', e.message);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
 // RÉACTIONS
 // ═══════════════════════════════════════════════════════════════════════════════
 
@@ -578,15 +926,32 @@ app.post('/reaction/:id',
       const video = await Video.findById(req.params.id);
       if (!video) return res.status(404).json({ error: 'Vidéo introuvable' });
 
+      const access = await checkVideoAccess(req, video);
+      if (access !== 'ok') {
+        await cloudinary.uploader.destroy(file.filename, { resource_type: 'video' }).catch(() => {});
+        return res.status(access === 'login' ? 401 : 403).json({ error: 'Accès refusé' });
+      }
+
       const viewerName = (req.body?.viewerName || 'Anonyme').slice(0, 80);
       const reaction = await Reaction.create({
         videoId:      video._id,
+        viewerUserId: req.session.userId || null,
         viewerName,
         cloudinaryId: file.filename,
         url:          file.path
       });
 
       res.json({ reactionId: reaction._id, url: reaction.url });
+
+      // Notification in-app (pastille dashboard)
+      Notification.create({
+        userId:     video.userId,
+        type:       'reaction',
+        videoId:    video._id,
+        reactionId: reaction._id,
+        viewerName,
+        videoTitle: (video.originalName || '').slice(0, 120)
+      }).catch(e => console.error('[NOTIF DB]', e.message));
 
       // Notification email (non-bloquant)
       if (resend) {
@@ -630,6 +995,7 @@ app.delete('/api/video/:id', requireAuth, async (req, res) => {
       await cloudinary.uploader.destroy(r.cloudinaryId, { resource_type: 'video' }).catch(() => {});
     }
     await Reaction.deleteMany({ videoId: video._id });
+    await View.deleteMany({ videoId: video._id }).catch(() => {});
     await cloudinary.uploader.destroy(video.cloudinaryId, { resource_type: 'video' }).catch(() => {});
     await Video.deleteOne({ _id: video._id });
 
@@ -970,6 +1336,7 @@ app.get('/admin',           requireAdminPage, (req, res) => res.sendFile(path.jo
 app.get('/admin/users/:id', requireAdminPage, (req, res) => res.sendFile(path.join(__dirname, 'public', 'admin-user.html')));
 app.get('/watch/:id',  (req, res) => res.sendFile(path.join(__dirname, 'public', 'watch.html')));
 app.get('/dashboard',  (req, res) => res.sendFile(path.join(__dirname, 'public', 'dashboard.html')));
+app.get('/stats',      (req, res) => res.sendFile(path.join(__dirname, 'public', 'stats.html')));
 app.get('/login',      (req, res) => res.sendFile(path.join(__dirname, 'public', 'login.html')));
 app.get('/register',   (req, res) => res.sendFile(path.join(__dirname, 'public', 'login.html')));
 app.get('/pricing',    (req, res) => res.sendFile(path.join(__dirname, 'public', 'pricing.html')));

@@ -60,6 +60,26 @@ main { flex: 1; padding: 48px; max-width: 1200px; width: 100%; margin: 0 auto; }
 .video-expiry { font-size: 10px; color: var(--muted); letter-spacing: 0.06em; margin-top: 4px; }
 .video-expiry.soon { color: #e67e22; }
 
+.notif-wrap { position: relative; }
+.btn-notif { background: none; border: 1px solid var(--border); border-radius: 2px; width: 34px; height: 34px; display: inline-flex; align-items: center; justify-content: center; color: var(--muted); cursor: pointer; transition: color 0.2s, border-color 0.2s; position: relative; padding: 0; }
+.btn-notif:hover { color: var(--text); border-color: var(--muted); }
+.btn-notif svg { width: 14px; height: 14px; }
+.notif-dot { position: absolute; top: -4px; right: -4px; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 8px; background: var(--gold); color: #0a0a0a; font-size: 9px; font-weight: 600; letter-spacing: 0; display: none; align-items: center; justify-content: center; line-height: 1; border: 2px solid var(--bg); }
+.notif-dot.show { display: inline-flex; }
+.notif-panel { display: none; position: absolute; top: calc(100% + 10px); right: 0; width: 340px; max-width: calc(100vw - 32px); max-height: 460px; overflow-y: auto; background: var(--surface); border: 1px solid var(--border); border-radius: 3px; box-shadow: 0 12px 40px rgba(0,0,0,0.6); z-index: 150; }
+.notif-panel.open { display: block; }
+.notif-panel-header { padding: 12px 16px; border-bottom: 1px solid var(--border); font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--muted); display: flex; justify-content: space-between; align-items: center; }
+.notif-panel-header em { color: var(--gold); font-style: normal; }
+.notif-empty { padding: 36px 20px; text-align: center; font-size: 11px; color: var(--muted); letter-spacing: 0.06em; }
+.notif-item { display: block; padding: 12px 16px; border-bottom: 1px solid var(--border); text-decoration: none; color: var(--text); transition: background 0.15s; cursor: pointer; }
+.notif-item:last-child { border-bottom: none; }
+.notif-item:hover { background: var(--surface2); }
+.notif-item.unread { background: rgba(201,168,76,0.04); }
+.notif-item.unread::before { content: ''; display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--gold); margin-right: 8px; vertical-align: middle; }
+.notif-item-text { font-size: 12px; line-height: 1.5; }
+.notif-item-text strong { color: var(--gold); font-weight: 400; }
+.notif-item-date { font-size: 10px; color: var(--muted); letter-spacing: 0.06em; margin-top: 4px; }
+
 .toast { position: fixed; bottom: 32px; left: 50%; transform: translateX(-50%); background: var(--green); color: #fff; padding: 12px 24px; border-radius: 3px; font-size: 12px; letter-spacing: 0.08em; z-index: 300; animation: toastIn 0.3s ease; pointer-events: none; }
 @keyframes toastIn { from { opacity: 0; transform: translateX(-50%) translateY(12px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }
 
@@ -117,6 +137,50 @@ main { flex: 1; padding: 48px; max-width: 1200px; width: 100%; margin: 0 auto; }
 .btn-delete { display: flex; align-items: center; gap: 5px; background: none; border: 1px solid transparent; border-radius: 2px; padding: 6px 10px; color: var(--muted); font-family: 'DM Mono', monospace; font-size: 10px; letter-spacing: 0.1em; cursor: pointer; transition: all 0.2s; flex-shrink: 0; }
 .btn-delete:hover { color: #c0392b; border-color: rgba(192,57,43,0.3); }
 
+/* Onglets */
+.tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--border); margin-bottom: 24px; }
+.tab {
+  background: none; border: none; padding: 12px 20px; cursor: pointer;
+  font-family: 'DM Mono', monospace; font-size: 11px; letter-spacing: 0.14em;
+  text-transform: uppercase; color: var(--muted);
+  border-bottom: 2px solid transparent; transform: translateY(1px);
+  transition: color 0.2s, border-color 0.2s;
+  display: inline-flex; align-items: center; gap: 8px;
+}
+.tab:hover { color: var(--text); }
+.tab.active { color: var(--gold); border-bottom-color: var(--gold); }
+.tab-count {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 18px; height: 18px; padding: 0 6px;
+  background: var(--surface2); border: 1px solid var(--border); border-radius: 9px;
+  font-size: 9px; color: var(--muted); letter-spacing: 0;
+}
+.tab.active .tab-count { background: rgba(201,168,76,0.12); border-color: var(--gold-dim); color: var(--gold); }
+
+/* Mes réactions */
+.my-rx-list { display: flex; flex-direction: column; gap: 12px; }
+.my-rx-card {
+  display: grid; grid-template-columns: 120px 1fr auto; gap: 18px; align-items: center;
+  padding: 14px 18px; background: var(--surface); border: 1px solid var(--border); border-radius: 4px;
+  transition: border-color 0.2s;
+}
+.my-rx-card:hover { border-color: var(--gold-dim); }
+.my-rx-thumb { width: 120px; height: 68px; background: #000; border: 1px solid var(--border); border-radius: 2px; overflow: hidden; cursor: pointer; position: relative; }
+.my-rx-thumb video { width: 100%; height: 100%; object-fit: contain; }
+.my-rx-meta { min-width: 0; }
+.my-rx-orig { font-size: 12px; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 4px; }
+.my-rx-orig em { font-style: italic; color: var(--gold); }
+.my-rx-author { font-size: 11px; color: var(--muted); letter-spacing: 0.04em; margin-bottom: 4px; }
+.my-rx-date { font-size: 10px; color: var(--muted); letter-spacing: 0.06em; }
+.my-rx-actions { display: flex; gap: 8px; flex-shrink: 0; }
+.my-rx-card.unavailable { opacity: 0.55; }
+.my-rx-card.unavailable .my-rx-thumb { background: #1a1a1a; display: flex; align-items: center; justify-content: center; cursor: default; color: var(--muted); font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; }
+@media (max-width: 600px) {
+  .my-rx-card { grid-template-columns: 80px 1fr; gap: 12px; padding: 12px; }
+  .my-rx-thumb { width: 80px; height: 46px; }
+  .my-rx-actions { grid-column: 1 / -1; justify-content: flex-end; }
+}
+
 .spinner { width: 32px; height: 32px; border: 2px solid var(--border); border-top-color: var(--gold); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 80px auto; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
@@ -161,6 +225,19 @@ main { flex: 1; padding: 48px; max-width: 1200px; width: 100%; margin: 0 auto; }
     <a class="logo" href="/" aria-label="ReactionCam"><svg class="logo-mark" viewBox="0 0 32 32" width="22" height="22" aria-hidden="true" focusable="false"><circle cx="16" cy="16" r="14" fill="none" stroke="currentColor" stroke-width="1.6"/><circle cx="16" cy="16" r="5" fill="currentColor"/></svg><span class="logo-text">Reaction<em>Cam</em></span></a>
     <div class="nav-right">
       <div id="rc-controls-mount"></div>
+      <div class="notif-wrap">
+        <button class="btn-notif" id="btnNotif" aria-label="Notifications">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M3.5 6.5a4.5 4.5 0 0 1 9 0v3l1 2H2.5l1-2v-3z"/>
+            <path d="M6.5 13.5a1.5 1.5 0 0 0 3 0"/>
+          </svg>
+          <span class="notif-dot" id="notifDot">0</span>
+        </button>
+        <div class="notif-panel" id="notifPanel">
+          <div class="notif-panel-header"><span>Notifications</span></div>
+          <div id="notifList"><div class="notif-empty">Aucune notification</div></div>
+        </div>
+      </div>
       <a class="user-name" href="/account" id="userName">…</a>
       <span class="plan-badge free" id="planBadge">…</span>
       <button class="btn-logout" id="btnLogout" data-i18n="nav.logout">Déconnexion</button>
@@ -172,16 +249,35 @@ main { flex: 1; padding: 48px; max-width: 1200px; width: 100%; margin: 0 auto; }
       <div>
         <div class="page-title"><span data-i18n="dashboard.title">Mes</span> <em data-i18n="dashboard.title.em">vidéos</em></div>
       </div>
-      <a href="/" class="btn-upload">
-        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5">
-          <path d="M6 1v7M2 5l4-4 4 4"/><path d="M1 10h10"/>
-        </svg>
-        <span data-i18n="nav.upload">Uploader une vidéo</span>
-      </a>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;">
+        <a href="/stats" class="btn-manage" style="text-decoration:none;">
+          <svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M1 11h10M3 9V6M6 9V3M9 9V7"/>
+          </svg>
+          Statistiques
+        </a>
+        <a href="/" class="btn-upload">
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M6 1v7M2 5l4-4 4 4"/><path d="M1 10h10"/>
+          </svg>
+          <span data-i18n="nav.upload">Uploader une vidéo</span>
+        </a>
+      </div>
     </div>
 
     <div id="planInfo" style="display:none;" class="plan-bar"></div>
+
+    <div class="tabs" role="tablist">
+      <button class="tab active" id="tabVideos" role="tab">
+        Mes vidéos <span class="tab-count" id="cntVideos">0</span>
+      </button>
+      <button class="tab" id="tabReactions" role="tab">
+        Mes réactions <span class="tab-count" id="cntReactions">0</span>
+      </button>
+    </div>
+
     <div id="content"><div class="spinner"></div></div>
+    <div id="contentRx" style="display:none;"><div class="spinner"></div></div>
   </main>
 </div>
 
@@ -239,6 +335,101 @@ async function init() {
   }
 
   loadDashboard();
+  initNotifications();
+}
+
+// ── Notifications ───────────────────────────────────────────────────────────
+let _notifPollTimer = null;
+
+function fmtNotifDate(iso) {
+  const d = new Date(iso);
+  const diff = (Date.now() - d.getTime()) / 1000;
+  if (diff < 60)    return 'à l’instant';
+  if (diff < 3600)  return Math.floor(diff / 60) + ' min';
+  if (diff < 86400) return Math.floor(diff / 3600) + ' h';
+  if (diff < 604800) return Math.floor(diff / 86400) + ' j';
+  return d.toLocaleDateString(DATE_LOCALES[localStorage.getItem('rc-lang')] || 'fr-FR');
+}
+
+async function fetchNotifications() {
+  try {
+    const r = await fetch('/api/notifications');
+    if (!r.ok) return;
+    const data = await r.json();
+    renderNotifBadge(data.unread);
+    renderNotifList(data.items);
+  } catch {}
+}
+
+function renderNotifBadge(unread) {
+  const dot = document.getElementById('notifDot');
+  if (unread > 0) {
+    dot.textContent = unread > 99 ? '99+' : String(unread);
+    dot.classList.add('show');
+  } else {
+    dot.classList.remove('show');
+  }
+}
+
+function renderNotifList(items) {
+  const list = document.getElementById('notifList');
+  if (!items || items.length === 0) {
+    list.innerHTML = '<div class="notif-empty">Aucune notification</div>';
+    return;
+  }
+  list.innerHTML = items.map(n => {
+    const title = n.videoTitle ? escHtml(n.videoTitle.slice(0, 50)) : 'ta vidéo';
+    const viewer = escHtml(n.viewerName || 'Anonyme');
+    return `<a class="notif-item ${n.read ? '' : 'unread'}" data-vid="${n.videoId || ''}" href="#">
+      <div class="notif-item-text"><strong>${viewer}</strong> a réagi à <em>${title}</em></div>
+      <div class="notif-item-date">${fmtNotifDate(n.createdAt)}</div>
+    </a>`;
+  }).join('');
+  list.querySelectorAll('.notif-item').forEach(el => {
+    el.addEventListener('click', (e) => {
+      e.preventDefault();
+      const vid = el.dataset.vid;
+      closeNotifPanel();
+      if (vid) {
+        const card = document.querySelector(`.video-card[data-id="${vid}"]`);
+        if (card) {
+          if (!card.classList.contains('open')) card.querySelector('.video-header')?.click();
+          card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }
+    });
+  });
+}
+
+function closeNotifPanel() {
+  document.getElementById('notifPanel').classList.remove('open');
+}
+
+async function markNotifsRead() {
+  try { await fetch('/api/notifications/read', { method: 'POST' }); } catch {}
+  renderNotifBadge(0);
+  document.querySelectorAll('.notif-item.unread').forEach(el => el.classList.remove('unread'));
+}
+
+function initNotifications() {
+  const btn   = document.getElementById('btnNotif');
+  const panel = document.getElementById('notifPanel');
+  btn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const opening = !panel.classList.contains('open');
+    panel.classList.toggle('open');
+    if (opening) {
+      fetchNotifications().then(() => {
+        if (document.getElementById('notifDot').classList.contains('show')) markNotifsRead();
+      });
+    }
+  });
+  document.addEventListener('click', (e) => {
+    if (!panel.contains(e.target) && e.target !== btn && !btn.contains(e.target)) closeNotifPanel();
+  });
+  fetchNotifications();
+  _notifPollTimer = setInterval(fetchNotifications, 30000);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) fetchNotifications(); });
 }
 
 document.getElementById('btnLogout').addEventListener('click', async () => {
@@ -251,6 +442,121 @@ async function loadDashboard() {
   _dashData  = await r.json();
   renderPlanBar(_dashData);
   renderDashboard(_dashData.videos);
+  document.getElementById('cntVideos').textContent = _dashData.videos.length;
+  initTabs();
+  loadMyReactions();
+}
+
+// ── Onglets vidéos / réactions ──────────────────────────────────────────────
+let _myReactions = null;
+
+function initTabs() {
+  const tabV = document.getElementById('tabVideos');
+  const tabR = document.getElementById('tabReactions');
+  const paneV = document.getElementById('content');
+  const paneR = document.getElementById('contentRx');
+
+  function activate(which) {
+    const isV = which === 'videos';
+    tabV.classList.toggle('active', isV);
+    tabR.classList.toggle('active', !isV);
+    paneV.style.display = isV ? '' : 'none';
+    paneR.style.display = isV ? 'none' : '';
+  }
+  tabV.addEventListener('click', () => activate('videos'));
+  tabR.addEventListener('click', () => activate('reactions'));
+}
+
+async function loadMyReactions() {
+  try {
+    const r = await fetch('/api/my-reactions');
+    if (!r.ok) throw new Error();
+    const data = await r.json();
+    _myReactions = data.reactions;
+    document.getElementById('cntReactions').textContent = _myReactions.length;
+    renderMyReactions(_myReactions);
+  } catch {
+    document.getElementById('contentRx').innerHTML = '<div class="empty"><p>Impossible de charger tes réactions.</p></div>';
+  }
+}
+
+function renderMyReactions(list) {
+  const el = document.getElementById('contentRx');
+  if (!list.length) {
+    el.innerHTML = `
+      <div class="empty">
+        <svg class="empty-icon" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.2">
+          <circle cx="24" cy="24" r="20"/>
+          <path d="M16 20h.01M32 20h.01M16 30c2 2 5 3 8 3s6-1 8-3"/>
+        </svg>
+        <h3>Pas encore de réaction</h3>
+        <p>Tes réactions enregistrées sur les vidéos d'autres utilisateurs apparaîtront ici (tant que tu es connecté quand tu réagis).</p>
+      </div>`;
+    return;
+  }
+
+  el.innerHTML = `<div class="my-rx-list">${list.map(rx => {
+    if (!rx.video.available) {
+      return `
+        <div class="my-rx-card unavailable" data-id="${rx.id}">
+          <div class="my-rx-thumb">supprimée</div>
+          <div class="my-rx-meta">
+            <div class="my-rx-orig"><em>vidéo originale supprimée</em></div>
+            <div class="my-rx-author">en tant que ${escHtml(rx.viewerName)}</div>
+            <div class="my-rx-date">${formatDate(rx.createdAt)}</div>
+          </div>
+          <div class="my-rx-actions">
+            <a class="reaction-dl" href="${rx.url}" download="reaction.webm">
+              <svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.4">
+                <path d="M6 1v8M3.5 6.5L6 9l2.5-2.5"/><path d="M1 11h10"/>
+              </svg>
+              <span>Télécharger</span>
+            </a>
+            <button class="btn-delete" data-rx-del="${rx.id}">
+              <svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M2 3h8M5 3V2h2v1M3.5 3l.5 7h4l.5-7M5 5v4M7 5v4"/></svg>
+            </button>
+          </div>
+        </div>`;
+    }
+    return `
+      <div class="my-rx-card" data-id="${rx.id}">
+        <div class="my-rx-thumb" data-rx-play="${rx.url}">
+          <video src="${rx.url}" muted preload="metadata"></video>
+        </div>
+        <div class="my-rx-meta">
+          <div class="my-rx-orig">Réaction sur <em>${escHtml(rx.video.originalName) || 'vidéo sans nom'}</em></div>
+          <div class="my-rx-author">de ${escHtml(rx.video.ownerName)} · en tant que ${escHtml(rx.viewerName)}</div>
+          <div class="my-rx-date">${formatDate(rx.createdAt)}</div>
+        </div>
+        <div class="my-rx-actions">
+          <a class="reaction-dl" href="${rx.url}" download="reaction.webm">
+            <svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.4">
+              <path d="M6 1v8M3.5 6.5L6 9l2.5-2.5"/><path d="M1 11h10"/>
+            </svg>
+            <span>Télécharger</span>
+          </a>
+          <button class="btn-delete" data-rx-del="${rx.id}">
+            <svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M2 3h8M5 3V2h2v1M3.5 3l.5 7h4l.5-7M5 5v4M7 5v4"/></svg>
+          </button>
+        </div>
+      </div>`;
+  }).join('')}</div>`;
+
+  el.querySelectorAll('[data-rx-play]').forEach(t => {
+    t.addEventListener('click', () => openModal(t.dataset.rxPlay));
+  });
+  el.querySelectorAll('[data-rx-del]').forEach(b => {
+    b.addEventListener('click', () => deleteMyReaction(b.dataset.rxDel));
+  });
+}
+
+async function deleteMyReaction(id) {
+  if (!confirm('Supprimer cette réaction ?')) return;
+  const r = await fetch(`/api/my-reactions/${id}`, { method: 'DELETE' });
+  if (!r.ok) { alert('Erreur lors de la suppression'); return; }
+  _myReactions = _myReactions.filter(x => x.id !== id);
+  document.getElementById('cntReactions').textContent = _myReactions.length;
+  renderMyReactions(_myReactions);
 }
 
 function renderPlanBar({ plan, planLabel, maxVideos, videoCount }) {
@@ -363,21 +669,27 @@ function renderDashboard(videos) {
   });
 }
 
+function renderVisBadge(v) {
+  if (v.visibility !== 'private') return '';
+  return ` <span style="display:inline-block;margin-left:6px;padding:2px 6px;font-size:9px;letter-spacing:0.14em;text-transform:uppercase;color:var(--gold);border:1px solid var(--gold-dim);border-radius:2px;vertical-align:middle;">Privée</span>`;
+}
+
 function renderVideoCard(v) {
   const shareLink = `${location.origin}/watch/${v.id}`;
   const count = v.reactions.length;
   return `
-  <div class="video-card" id="card-${v.id}">
+  <div class="video-card" id="card-${v.id}" data-id="${v.id}">
     <div class="video-header" id="header-${v.id}">
       <div class="video-thumb">
         <video src="${v.url}" muted preload="metadata" crossorigin="anonymous"></video>
       </div>
       <div class="video-meta">
-        <div class="video-name">${escHtml(v.originalName) || window.__('dashboard.no-name')}</div>
+        <div class="video-name">${escHtml(v.originalName) || window.__('dashboard.no-name')}${renderVisBadge(v)}</div>
         <div class="video-date">${formatDate(v.createdAt)}</div>
         <div class="video-stats">
           <span class="stat"><span class="stat-val">${count}</span><span class="stat-lbl">${window.__(count !== 1 ? 'dashboard.rx.plural' : 'dashboard.rx.singular')}</span></span>
         </div>
+        ${v.visibility === 'private' && v.allowedEmails?.length ? `<div class="video-expiry" style="color:var(--gold);">🔒 Privée · ${v.allowedEmails.length} invité${v.allowedEmails.length > 1 ? 's' : ''}</div>` : ''}
         ${renderExpiry(v.expiresAt)}
       </div>
       <div class="video-actions">
@@ -461,6 +773,7 @@ document.addEventListener('rc-langchange', () => {
     renderPlanBar(_dashData);
     renderDashboard(_dashData.videos);
   }
+  if (_myReactions) renderMyReactions(_myReactions);
   document.getElementById('modalClose').textContent = window.__('dashboard.modal.close');
 });
 
