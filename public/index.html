@@ -385,18 +385,6 @@
   .hero > *:nth-child(3) { animation-delay: 0.3s; }
   .hero > *:nth-child(4) { animation-delay: 0.35s; }
 
-  /* ── Nav links ── */
-  #authNav a, #userNav a, #navUserName {
-    padding: 5px 11px;
-    border: 1px solid var(--border);
-    border-radius: 2px;
-    background: var(--surface);
-    transition: border-color 0.2s, background 0.2s;
-  }
-  #authNav a:hover, #userNav a:hover { border-color: var(--muted); background: var(--surface2); }
-  #authNav a[href="/register"] { border-color: var(--gold-dim); }
-  #navUserName { display: inline-block; }
-
   /* ── Mobile ── */
   @media (max-width: 600px) {
     header {
@@ -405,7 +393,6 @@
       gap: 0;
     }
     header .tagline { display: none; }
-    #authNav, #userNav { display: none !important; }
     .hero {
       padding: 40px 20px 48px;
     }
@@ -436,19 +423,7 @@
 <header>
   <a class="logo" href="/" aria-label="ReactionCam"><svg class="logo-mark" viewBox="0 0 32 32" width="22" height="22" aria-hidden="true" focusable="false"><circle cx="16" cy="16" r="14" fill="none" stroke="currentColor" stroke-width="1.6"/><circle cx="16" cy="16" r="5" fill="currentColor"/></svg><span class="logo-text">Reaction<em>Cam</em></span></a>
   <span class="tagline" data-i18n="index.tagline">Capture les vraies réactions</span>
-  <div class="header-right">
-    <div id="authNav" style="display:flex;gap:12px;align-items:center;">
-      <a href="/pricing" style="font-size:11px;letter-spacing:0.12em;color:var(--muted);text-decoration:none;text-transform:uppercase;" data-i18n="nav.pricing">Tarifs</a>
-      <a href="/login" style="font-size:11px;letter-spacing:0.12em;color:var(--muted);text-decoration:none;text-transform:uppercase;" data-i18n="nav.login">Connexion</a>
-      <a href="/register" style="font-size:11px;letter-spacing:0.12em;color:var(--gold);text-decoration:none;text-transform:uppercase;" data-i18n="nav.register">Créer un compte</a>
-    </div>
-    <div id="userNav" style="display:none;gap:12px;align-items:center;">
-      <a href="/pricing" style="font-size:11px;letter-spacing:0.12em;color:var(--muted);text-decoration:none;text-transform:uppercase;" data-i18n="nav.pricing">Tarifs</a>
-      <a href="/dashboard" style="font-size:11px;letter-spacing:0.12em;color:var(--muted);text-decoration:none;text-transform:uppercase;" data-i18n="nav.dashboard">Mon espace</a>
-      <a href="/account" id="navUserName" style="font-size:11px;color:var(--gold);letter-spacing:0.08em;text-decoration:none;"></a>
-    </div>
-    <div id="rc-controls-mount"></div>
-  </div>
+  <div class="header-right"></div>
 </header>
 
 <main class="hero">
@@ -529,15 +504,12 @@
 </footer>
 
 <script src="/ui.js"></script>
+<script src="/rc-nav.js" defer></script>
 <script src="/rc-notif.js" defer></script>
 <script>
-// Auth check
+// Auth check — mobile menu only (desktop nav handled by rc-nav.js)
 fetch('/api/auth/me').then(r => {
   if (r.ok) r.json().then(u => {
-    document.getElementById('authNav').style.display = 'none';
-    document.getElementById('userNav').style.display = 'flex';
-    document.getElementById('navUserName').textContent = u.name;
-    // Mobile menu — state connecté
     window.RC.clearMobileLinks();
     window.RC.addMobileLink(window.RC.makeMobileLink(window.__('nav.pricing'), '/pricing', false, 'nav.pricing'));
     window.RC.addMobileLink(window.RC.makeMobileLink(window.__('nav.dashboard'), '/dashboard', false, 'nav.dashboard'));

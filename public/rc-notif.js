@@ -32,16 +32,23 @@
       + '.rc-notif-dot.show { display: inline-flex; }'
       + '.rc-notif-panel { display: none; position: absolute; top: calc(100% + 10px); right: 0; width: 340px; max-width: calc(100vw - 32px); max-height: 460px; overflow-y: auto; background: var(--surface, #111); border: 1px solid var(--border, #1e1e1e); border-radius: 3px; box-shadow: 0 12px 40px rgba(0,0,0,0.6); z-index: 1500; font-family: "DM Mono", monospace; }'
       + '.rc-notif-panel.open { display: block; }'
-      + '.rc-notif-head { padding: 12px 16px; border-bottom: 1px solid var(--border, #1e1e1e); font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--muted, #5a5245); }'
+      + '.rc-notif-head { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; border-bottom: 1px solid var(--border, #1e1e1e); font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--muted, #5a5245); }'
+      + '.rc-notif-clear { background: none; border: none; padding: 0; color: var(--muted, #5a5245); font-family: inherit; font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; cursor: pointer; transition: color 0.15s; }'
+      + '.rc-notif-clear:hover { color: var(--gold, #c9a84c); }'
+      + '.rc-notif-clear[hidden] { display: none; }'
       + '.rc-notif-empty { padding: 36px 20px; text-align: center; font-size: 11px; color: var(--muted, #5a5245); letter-spacing: 0.06em; }'
-      + '.rc-notif-item { display: block; padding: 12px 16px; border-bottom: 1px solid var(--border, #1e1e1e); text-decoration: none; color: var(--text, #e8e0d0); cursor: pointer; transition: background 0.15s; }'
+      + '.rc-notif-item { position: relative; display: flex; align-items: flex-start; gap: 8px; padding: 12px 40px 12px 16px; border-bottom: 1px solid var(--border, #1e1e1e); text-decoration: none; color: var(--text, #e8e0d0); cursor: pointer; transition: background 0.15s; }'
       + '.rc-notif-item:last-child { border-bottom: none; }'
       + '.rc-notif-item:hover { background: var(--surface2, #141414); }'
       + '.rc-notif-item.unread { background: rgba(201,168,76,0.04); }'
-      + '.rc-notif-item.unread::before { content: ""; display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--gold, #c9a84c); margin-right: 8px; vertical-align: middle; }'
+      + '.rc-notif-item.unread .rc-notif-body::before { content: ""; display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--gold, #c9a84c); margin-right: 8px; vertical-align: middle; }'
+      + '.rc-notif-body { flex: 1; min-width: 0; }'
       + '.rc-notif-text { font-size: 12px; line-height: 1.5; }'
       + '.rc-notif-text strong { color: var(--gold, #c9a84c); font-weight: 400; }'
       + '.rc-notif-date { font-size: 10px; color: var(--muted, #5a5245); letter-spacing: 0.06em; margin-top: 4px; }'
+      + '.rc-notif-close { position: absolute; top: 10px; right: 10px; width: 22px; height: 22px; display: inline-flex; align-items: center; justify-content: center; background: none; border: none; padding: 0; color: var(--muted, #5a5245); cursor: pointer; border-radius: 2px; opacity: 0.6; transition: opacity 0.15s, color 0.15s, background 0.15s; }'
+      + '.rc-notif-close:hover { opacity: 1; color: var(--text, #e8e0d0); background: rgba(255,255,255,0.05); }'
+      + '.rc-notif-close svg { width: 10px; height: 10px; }'
       + '@media (max-width: 600px) { .rc-notif-panel { width: 300px; right: -8px; } }';
     var style = document.createElement('style');
     style.id = 'rc-notif-styles';
@@ -62,22 +69,27 @@
       +   '<span class="rc-notif-dot" id="rcNotifDot">0</span>'
       + '</button>'
       + '<div class="rc-notif-panel" id="rcNotifPanel">'
-      +   '<div class="rc-notif-head">Notifications</div>'
+      +   '<div class="rc-notif-head"><span>Notifications</span><button type="button" class="rc-notif-clear" id="rcNotifClear" hidden>Tout effacer</button></div>'
       +   '<div id="rcNotifList"><div class="rc-notif-empty">Aucune notification</div></div>'
       + '</div>';
     return wrap;
   }
 
   function mount(widget) {
-    // 1) inside .nav-right (just after #rc-controls-mount if present)
-    var navRight = document.querySelector('.nav-right');
-    if (navRight) {
-      var ctl = navRight.querySelector('#rc-controls-mount');
-      if (ctl && ctl.nextSibling) navRight.insertBefore(widget, ctl.nextSibling);
-      else navRight.insertBefore(widget, navRight.firstChild);
+    // 1) dedicated slot at the right end (built by rc-nav.js)
+    var slot = document.getElementById('rc-notif-mount');
+    if (slot) {
+      slot.appendChild(widget);
+      slot.style.display = 'inline-flex';
       return true;
     }
-    // 2) right after #rc-controls-mount wherever it lives
+    // 2) inside .nav-right / .header-right — append at the end (rightmost)
+    var navRight = document.querySelector('.nav-right, .header-right');
+    if (navRight) {
+      navRight.appendChild(widget);
+      return true;
+    }
+    // 3) right after #rc-controls-mount wherever it lives
     var ctlGlobal = document.getElementById('rc-controls-mount');
     if (ctlGlobal && ctlGlobal.parentElement) {
       ctlGlobal.parentElement.insertBefore(widget, ctlGlobal.nextSibling);
@@ -99,21 +111,40 @@
 
   function renderList(items) {
     var list = document.getElementById('rcNotifList');
+    var clearBtn = document.getElementById('rcNotifClear');
     if (!list) return;
     if (!items || items.length === 0) {
       list.innerHTML = '<div class="rc-notif-empty">Aucune notification</div>';
+      if (clearBtn) clearBtn.hidden = true;
       return;
     }
+    if (clearBtn) clearBtn.hidden = false;
     list.innerHTML = items.map(function (n) {
       var title = n.videoTitle ? escHtml(String(n.videoTitle).slice(0, 50)) : 'ta vidéo';
       var viewer = escHtml(n.viewerName || 'Anonyme');
-      return '<a class="rc-notif-item ' + (n.read ? '' : 'unread') + '" data-vid="' + (n.videoId || '') + '" href="#">'
-        + '<div class="rc-notif-text"><strong>' + viewer + '</strong> a réagi à <em>' + title + '</em></div>'
-        + '<div class="rc-notif-date">' + fmtNotifDate(n.createdAt) + '</div>'
-        + '</a>';
+      return '<div class="rc-notif-item ' + (n.read ? '' : 'unread') + '" data-vid="' + (n.videoId || '') + '" data-id="' + (n.id || '') + '">'
+        + '<div class="rc-notif-body">'
+        +   '<div class="rc-notif-text"><strong>' + viewer + '</strong> a réagi à <em>' + title + '</em></div>'
+        +   '<div class="rc-notif-date">' + fmtNotifDate(n.createdAt) + '</div>'
+        + '</div>'
+        + '<button type="button" class="rc-notif-close" aria-label="Supprimer la notification">'
+        +   '<svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M1.5 1.5l7 7M8.5 1.5l-7 7"/></svg>'
+        + '</button>'
+        + '</div>';
     }).join('');
+    list.querySelectorAll('.rc-notif-close').forEach(function (btn) {
+      btn.addEventListener('click', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var item = btn.closest('.rc-notif-item');
+        if (!item) return;
+        var id = item.dataset.id;
+        deleteOne(id, item);
+      });
+    });
     list.querySelectorAll('.rc-notif-item').forEach(function (el) {
       el.addEventListener('click', function (e) {
+        if (e.target.closest('.rc-notif-close')) return;
         e.preventDefault();
         var vid = el.dataset.vid;
         closePanel();
@@ -130,6 +161,42 @@
         }
       });
     });
+  }
+
+  function deleteOne(id, el) {
+    if (!id) return;
+    if (el) el.style.opacity = '0.4';
+    fetch('/api/notifications/' + encodeURIComponent(id), {
+      method: 'DELETE',
+      credentials: 'same-origin'
+    }).then(function (r) {
+      if (!r.ok) throw new Error();
+      var wasUnread = el && el.classList.contains('unread');
+      if (el) el.remove();
+      var list = document.getElementById('rcNotifList');
+      if (list && !list.querySelector('.rc-notif-item')) {
+        list.innerHTML = '<div class="rc-notif-empty">Aucune notification</div>';
+        var clearBtn = document.getElementById('rcNotifClear');
+        if (clearBtn) clearBtn.hidden = true;
+      }
+      if (wasUnread) {
+        var dot = document.getElementById('rcNotifDot');
+        var n = dot ? parseInt(dot.textContent, 10) : 0;
+        renderBadge(isNaN(n) ? 0 : Math.max(0, n - 1));
+      }
+    }).catch(function () {
+      if (el) el.style.opacity = '';
+    });
+  }
+
+  function deleteAll() {
+    fetch('/api/notifications', { method: 'DELETE', credentials: 'same-origin' })
+      .then(function (r) {
+        if (!r.ok) throw new Error();
+        renderList([]);
+        renderBadge(0);
+      })
+      .catch(function () {});
   }
 
   function closePanel() {
@@ -157,6 +224,7 @@
     var btn = document.getElementById('rcNotifBtn');
     var panel = document.getElementById('rcNotifPanel');
     var dot = document.getElementById('rcNotifDot');
+    var clearBtn = document.getElementById('rcNotifClear');
     if (!btn || !panel) return;
 
     btn.addEventListener('click', function (e) {
@@ -169,6 +237,12 @@
         });
       }
     });
+    if (clearBtn) {
+      clearBtn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        deleteAll();
+      });
+    }
     document.addEventListener('click', function (e) {
       if (!panel.contains(e.target) && e.target !== btn && !btn.contains(e.target)) closePanel();
     });

@@ -912,6 +912,30 @@ app.post('/api/notifications/read', requireAuth, async (req, res) => {
   }
 });
 
+app.delete('/api/notifications/:id', requireAuth, async (req, res) => {
+  try {
+    if (!mongoose.isValidObjectId(req.params.id)) {
+      return res.status(400).json({ error: 'ID invalide' });
+    }
+    const r = await Notification.deleteOne({ _id: req.params.id, userId: req.session.userId });
+    if (!r.deletedCount) return res.status(404).json({ error: 'Notification introuvable' });
+    res.json({ ok: true });
+  } catch (e) {
+    console.error('[NOTIF DELETE]', e.message);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+app.delete('/api/notifications', requireAuth, async (req, res) => {
+  try {
+    await Notification.deleteMany({ userId: req.session.userId });
+    res.json({ ok: true });
+  } catch (e) {
+    console.error('[NOTIF CLEAR]', e.message);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // RÉACTIONS
 // ═══════════════════════════════════════════════════════════════════════════════

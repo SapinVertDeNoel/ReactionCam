@@ -41,16 +41,6 @@ nav {
 .logo { display: inline-flex; align-items: center; gap: 6px; text-decoration: none; }
 .logo span { font-style: italic; }
 .nav-right { display: flex; align-items: center; gap: 12px; }
-.user-name { font-size: 12px; color: var(--muted); letter-spacing: 0.06em; text-decoration: none; cursor: pointer; }
-.user-name:hover { color: var(--text); }
-.btn-logout { background: none; border: 1px solid var(--border); border-radius: 2px; padding: 8px 16px; color: var(--muted); font-family: 'DM Mono', monospace; font-size: 11px; letter-spacing: 0.1em; cursor: pointer; transition: color 0.2s, border-color 0.2s; }
-.btn-logout:hover { color: var(--text); border-color: var(--muted); }
-.btn-admin { background: none; border: 1px solid var(--gold-dim); border-radius: 2px; padding: 3px 8px; color: var(--gold); font-family: 'DM Mono', monospace; font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; text-decoration: none; transition: background 0.2s; }
-.btn-admin:hover { background: rgba(201,168,76,0.08); }
-.plan-badge { display: inline-block; padding: 3px 8px; border-radius: 2px; font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; }
-.plan-badge.free { border: 1px solid var(--border); color: var(--muted); }
-.plan-badge.pro  { border: 1px solid var(--gold-dim); color: var(--gold); background: rgba(201,168,76,0.06); }
-.plan-badge.admin { border: 1px solid var(--gold-dim); color: var(--gold); background: rgba(201,168,76,0.06); }
 
 main { flex: 1; padding: 48px; max-width: 1200px; width: 100%; margin: 0 auto; }
 
@@ -85,8 +75,12 @@ main { flex: 1; padding: 48px; max-width: 1200px; width: 100%; margin: 0 auto; }
 .video-card { background: var(--surface); border: 1px solid var(--border); border-radius: 4px; overflow: hidden; }
 .video-header { display: flex; align-items: center; gap: 20px; padding: 20px 24px; cursor: pointer; transition: background 0.2s; }
 .video-header:hover { background: var(--surface2); }
-.video-thumb { width: 120px; height: 68px; background: #000; border-radius: 2px; overflow: hidden; flex-shrink: 0; position: relative; border: 1px solid var(--border); }
-.video-thumb video { width: 100%; height: 100%; object-fit: cover; }
+.video-thumb { width: 120px; height: 68px; background: #000; border-radius: 2px; overflow: hidden; flex-shrink: 0; position: relative; border: 1px solid var(--border); cursor: pointer; transition: border-color 0.2s; }
+.video-thumb:hover { border-color: var(--gold-dim); }
+.video-thumb video { width: 100%; height: 100%; object-fit: cover; pointer-events: none; }
+.video-thumb .play-overlay { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.35); transition: background 0.2s; }
+.video-thumb:hover .play-overlay { background: rgba(0,0,0,0.15); }
+.video-thumb .play-overlay svg { width: 22px; height: 22px; color: rgba(255,255,255,0.85); filter: drop-shadow(0 2px 4px rgba(0,0,0,0.6)); }
 .video-thumb-placeholder { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; opacity: 0.2; }
 .video-meta { flex: 1; min-width: 0; }
 .video-name { font-size: 13px; color: var(--text); margin-bottom: 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -102,7 +96,8 @@ main { flex: 1; padding: 48px; max-width: 1200px; width: 100%; margin: 0 auto; }
 .chevron { transition: transform 0.3s; opacity: 0.4; flex-shrink: 0; }
 .video-card.open .chevron { transform: rotate(180deg); }
 
-.reactions-section { border-top: 1px solid var(--border); }
+.reactions-section { border-top: 1px solid var(--border); display: none; }
+.video-card.open .reactions-section { display: block; }
 .reactions-header { padding: 14px 24px; font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--muted); background: #0d0d0d; }
 .reactions-list { padding: 0; }
 .reaction-row { display: flex; align-items: center; gap: 16px; padding: 14px 24px; border-bottom: 1px solid var(--border); transition: background 0.15s; }
@@ -182,7 +177,6 @@ main { flex: 1; padding: 48px; max-width: 1200px; width: 100%; margin: 0 auto; }
 
 @media (max-width: 600px) {
   nav { height: 62px; padding: 0 18px; }
-  .user-name, .plan-badge, .btn-logout { display: none !important; }
 }
 @media (max-width: 640px) {
   main { padding: 24px 16px; }
@@ -209,12 +203,7 @@ main { flex: 1; padding: 48px; max-width: 1200px; width: 100%; margin: 0 auto; }
 <div class="app">
   <nav>
     <a class="logo" href="/" aria-label="ReactionCam"><svg class="logo-mark" viewBox="0 0 32 32" width="22" height="22" aria-hidden="true" focusable="false"><circle cx="16" cy="16" r="14" fill="none" stroke="currentColor" stroke-width="1.6"/><circle cx="16" cy="16" r="5" fill="currentColor"/></svg><span class="logo-text">Reaction<em>Cam</em></span></a>
-    <div class="nav-right">
-      <div id="rc-controls-mount"></div>
-      <a class="user-name" href="/account" id="userName">…</a>
-      <span class="plan-badge free" id="planBadge">…</span>
-      <button class="btn-logout" id="btnLogout" data-i18n="nav.logout">Déconnexion</button>
-    </div>
+    <div class="nav-right"></div>
   </nav>
 
   <main>
@@ -263,6 +252,7 @@ main { flex: 1; padding: 48px; max-width: 1200px; width: 100%; margin: 0 auto; }
 </div>
 
 <script src="/ui.js"></script>
+<script src="/rc-nav.js" defer></script>
 <script src="/rc-notif.js" defer></script>
 <script>
 const DATE_LOCALES = { fr: 'fr-FR', en: 'en-US', es: 'es-ES' };
@@ -279,7 +269,6 @@ async function init() {
   const r = await fetch('/api/auth/me');
   if (!r.ok) { location.href = '/login'; return; }
   me = await r.json();
-  document.getElementById('userName').textContent = me.name;
   // Mobile menu
   window.RC.clearMobileLinks();
   window.RC.addMobileLink(window.RC.makeMobileLink(me.name, '/account', true));
@@ -290,19 +279,6 @@ async function init() {
   });
   window.RC.addMobileLink(mLogout);
 
-  const badge = document.getElementById('planBadge');
-  badge.textContent = me.planLabel;
-  badge.className   = `plan-badge ${me.plan}`;
-
-  if (me.plan === 'admin') {
-    const badge = document.getElementById('planBadge');
-    const adminLink = document.createElement('a');
-    adminLink.href = '/admin';
-    adminLink.className = 'btn-admin';
-    adminLink.textContent = 'Admin';
-    badge.replaceWith(adminLink);
-  }
-
   if (new URLSearchParams(location.search).get('upgrade') === 'success') {
     showToast(window.__('dashboard.toast.pro'));
     history.replaceState(null, '', '/dashboard');
@@ -310,11 +286,6 @@ async function init() {
 
   loadDashboard();
 }
-
-document.getElementById('btnLogout').addEventListener('click', async () => {
-  await fetch('/api/auth/logout', { method: 'POST' });
-  location.href = '/login';
-});
 
 async function loadDashboard() {
   const r    = await fetch('/api/dashboard');
@@ -506,6 +477,11 @@ function renderDashboard(videos) {
     document.getElementById(`header-${v.id}`).addEventListener('click', () => {
       document.getElementById(`card-${v.id}`).classList.toggle('open');
     });
+    const vthumb = document.getElementById(`vthumb-${v.id}`);
+    if (vthumb) vthumb.addEventListener('click', e => {
+      e.stopPropagation();
+      openModal(v.url);
+    });
     document.getElementById(`del-${v.id}`).addEventListener('click', async e => {
       e.stopPropagation();
       if (!confirm(window.__('dashboard.delete.confirm'))) return;
@@ -559,8 +535,11 @@ function renderVideoCard(v) {
   return `
   <div class="video-card" id="card-${v.id}" data-id="${v.id}">
     <div class="video-header" id="header-${v.id}">
-      <div class="video-thumb">
+      <div class="video-thumb" id="vthumb-${v.id}" title="Lire la vidéo">
         <video src="${v.url}" muted preload="metadata" crossorigin="anonymous"></video>
+        <div class="play-overlay">
+          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>
+        </div>
       </div>
       <div class="video-meta">
         <div class="video-name">${escHtml(v.originalName) || window.__('dashboard.no-name')}${renderVisBadge(v)}</div>

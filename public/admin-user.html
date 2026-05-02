@@ -142,6 +142,7 @@
 <link rel="stylesheet" href="/theme.css">
 <script src="/logo-theme.js" defer></script>
 <script src="/ui.js"></script>
+<script src="/rc-nav.js" defer></script>
 <script src="/rc-notif.js" defer></script>
 </head>
 <body>
@@ -150,9 +151,12 @@
   <a class="logo" href="/admin" aria-label="ReactionCam"><svg class="logo-mark" viewBox="0 0 32 32" width="22" height="22" aria-hidden="true" focusable="false"><circle cx="16" cy="16" r="14" fill="none" stroke="currentColor" stroke-width="1.6"/><circle cx="16" cy="16" r="5" fill="currentColor"/></svg><span class="logo-text">Reaction<em>Cam</em></span></a>
   <span class="header-badge">Admin</span>
   <span class="header-spacer"></span>
-  <div id="rc-controls-mount"></div>
-  <a class="back-btn" href="/admin">← Retour à la liste</a>
+  <div class="header-right"></div>
 </header>
+
+<div style="max-width:1280px;margin:16px auto 0;padding:0 24px;">
+  <a class="back-btn" href="/admin">← Retour à la liste</a>
+</div>
 
 <div class="main" id="main">
   <div style="padding:60px;text-align:center;color:var(--muted2)">Chargement…</div>

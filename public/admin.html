@@ -61,13 +61,6 @@
     padding: 2px 7px; border-radius: 2px;
   }
   .header-spacer { flex: 1; }
-  .header-user { color: var(--muted); font-size: 11px; }
-  .header-logout {
-    background: none; border: 1px solid var(--border2); color: var(--muted);
-    padding: 5px 12px; border-radius: var(--radius); cursor: pointer; font-family: inherit; font-size: 11px;
-    letter-spacing: .06em;
-  }
-  .header-logout:hover { border-color: var(--muted2); color: var(--text); }
 
   /* ── Layout ── */
   .layout { display: flex; min-height: calc(100vh - 52px); }
@@ -305,6 +298,7 @@
 <link rel="stylesheet" href="/theme.css">
 <script src="/logo-theme.js" defer></script>
 <script src="/ui.js"></script>
+<script src="/rc-nav.js" defer></script>
 <script src="/rc-notif.js" defer></script>
 </head>
 <body>
@@ -314,9 +308,7 @@
   <a class="logo" href="/admin" aria-label="ReactionCam"><svg class="logo-mark" viewBox="0 0 32 32" width="22" height="22" aria-hidden="true" focusable="false"><circle cx="16" cy="16" r="14" fill="none" stroke="currentColor" stroke-width="1.6"/><circle cx="16" cy="16" r="5" fill="currentColor"/></svg><span class="logo-text">Reaction<em>Cam</em></span></a>
   <span class="header-badge">Admin</span>
   <span class="header-spacer"></span>
-  <span class="header-user" id="headerUser"></span>
-  <div id="rc-controls-mount"></div>
-  <button class="header-logout" onclick="logout()">Déconnexion</button>
+  <div class="header-right"></div>
 </header>
 
 <div class="layout">
@@ -549,7 +541,6 @@ let debounceTimer = null;
     window.location = '/dashboard';
     return;
   }
-  document.getElementById('headerUser').textContent = me.email;
   loadStats();
 })();
 
@@ -921,11 +912,6 @@ function toast(msg, type = '') {
   el.className = 'show' + (type ? ' ' + type : '');
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => el.className = '', 3000);
-}
-
-async function logout() {
-  await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
-  window.location = '/login';
 }
 
 // Close modal on overlay click
