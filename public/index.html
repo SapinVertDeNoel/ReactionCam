@@ -145,11 +145,12 @@
     background: var(--surface);
   }
 
-  .drop-zone:hover, .drop-zone.drag-over {
+  .drop-zone:hover, .drop-zone.drag-over, .drop-zone:focus-visible {
     border-color: var(--gold-dim);
     background: #161410;
   }
 
+  .drop-zone:focus-visible { outline: 2px solid var(--gold); outline-offset: 4px; }
   .drop-zone.drag-over { border-color: var(--gold); }
 
   .drop-icon {
@@ -399,7 +400,7 @@
     .hero::after { display: none; }
     h1 { font-size: clamp(34px, 9vw, 56px); margin-bottom: 14px; }
     .subtitle { font-size: 11px; letter-spacing: 0.06em; margin-bottom: 36px; }
-    .drop-zone { padding: 36px 20px; }
+    .drop-zone { padding: 56px 20px; min-height: 220px; }
     .result-box { padding: 20px 18px; }
     .link-row { flex-direction: column; gap: 10px; }
     .copy-btn { width: 100%; padding: 14px; }
@@ -431,34 +432,34 @@
   <p class="subtitle" data-i18n="index.subtitle">Génère un lien · Le spectateur est filmé · Tu récupères sa réaction</p>
 
   <div class="visibility-panel" id="visibilityPanel">
-    <div class="vis-tabs" role="tablist">
-      <button type="button" class="vis-tab active" data-vis="public" role="tab">
-        <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="6" cy="6" r="5"/><path d="M1 6h10M6 1c2 1.5 2 8.5 0 10M6 1c-2 1.5-2 8.5 0 10"/></svg>
+    <div class="vis-tabs" role="tablist" aria-label="Visibilité de la vidéo">
+      <button type="button" class="vis-tab active" data-vis="public" role="tab" aria-selected="true" aria-label="Vidéo publique">
+        <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><circle cx="6" cy="6" r="5"/><path d="M1 6h10M6 1c2 1.5 2 8.5 0 10M6 1c-2 1.5-2 8.5 0 10"/></svg>
         Public
       </button>
-      <button type="button" class="vis-tab" data-vis="private" role="tab">
-        <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="2.5" y="5.5" width="7" height="5" rx="1"/><path d="M4 5.5V4a2 2 0 0 1 4 0v1.5"/></svg>
+      <button type="button" class="vis-tab" data-vis="private" role="tab" aria-selected="false" aria-label="Vidéo privée">
+        <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><rect x="2.5" y="5.5" width="7" height="5" rx="1"/><path d="M4 5.5V4a2 2 0 0 1 4 0v1.5"/></svg>
         Privé
       </button>
     </div>
     <div class="private-config" id="privateConfig">
       <p>Seules les personnes que tu listes ici pourront regarder cette vidéo. Elles recevront un email d'invitation et devront se connecter à ReactionCam avec cette adresse exacte.</p>
       <div class="email-chips" id="emailChips">
-        <input type="email" class="email-input" id="emailInput" placeholder="email@exemple.com puis Entrée">
+        <input type="email" class="email-input" id="emailInput" placeholder="email@exemple.com puis Entrée" aria-label="Adresse email à autoriser">
       </div>
       <div class="email-hint">Astuce : tu peux coller plusieurs emails séparés par des virgules.</div>
     </div>
   </div>
 
-  <div class="drop-zone" id="dropZone">
-    <svg class="drop-icon" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.5">
+  <div class="drop-zone" id="dropZone" role="button" tabindex="0" aria-label="Glisser ou sélectionner une vidéo (MP4, MOV, WEBM, max 500 Mo)">
+    <svg class="drop-icon" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
       <rect x="6" y="6" width="36" height="36" rx="4"/>
       <polygon points="19,16 33,24 19,32" fill="currentColor" stroke="none" opacity="0.4"/>
     </svg>
     <p class="drop-label" data-i18n-html="index.drop.main"><strong>Glisse ta vidéo ici</strong></p>
     <p class="drop-label" data-i18n-html="index.drop.or">ou <strong>clique pour sélectionner</strong></p>
     <p class="drop-limit">MP4, MOV, WEBM · max 500 MB</p>
-    <input type="file" id="fileInput" accept="video/*">
+    <input type="file" id="fileInput" accept="video/*" aria-label="Sélectionner une vidéo">
   </div>
 
   <div class="upload-progress" id="uploadProgress">
@@ -471,8 +472,8 @@
   <div class="result-box" id="resultBox">
     <p class="result-title" data-i18n="index.result.title">Lien prêt</p>
     <div class="link-row">
-      <input class="link-input" id="linkInput" type="text" readonly>
-      <button class="copy-btn" id="copyBtn" data-i18n="index.copy">Copier</button>
+      <input class="link-input" id="linkInput" type="text" readonly aria-label="Lien de partage">
+      <button class="copy-btn" id="copyBtn" data-i18n="index.copy" aria-label="Copier le lien de partage">Copier</button>
     </div>
     <button class="upload-another" id="uploadAnother" data-i18n="index.upload.again">↩ Uploader une autre vidéo</button>
   </div>
@@ -507,23 +508,6 @@
 <script src="/rc-nav.js" defer></script>
 <script src="/rc-notif.js" defer></script>
 <script>
-// Auth check — mobile menu only (desktop nav handled by rc-nav.js)
-fetch('/api/auth/me').then(r => {
-  if (r.ok) r.json().then(u => {
-    window.RC.clearMobileLinks();
-    window.RC.addMobileLink(window.RC.makeMobileLink(window.__('nav.pricing'), '/pricing', false, 'nav.pricing'));
-    window.RC.addMobileLink(window.RC.makeMobileLink(window.__('nav.dashboard'), '/dashboard', false, 'nav.dashboard'));
-    window.RC.addMobileLink(window.RC.makeMobileLink(u.name, '/account', true));
-  });
-});
-
-// Mobile menu — état initial (non connecté)
-document.addEventListener('rc-mobile-ready', function () {
-  window.RC.addMobileLink(window.RC.makeMobileLink(window.__('nav.pricing'), '/pricing', false, 'nav.pricing'));
-  window.RC.addMobileLink(window.RC.makeMobileLink(window.__('nav.login'), '/login', false, 'nav.login'));
-  window.RC.addMobileLink(window.RC.makeMobileLink(window.__('nav.register'), '/register', true, 'nav.register'));
-});
-
 const dropZone      = document.getElementById('dropZone');
 const fileInput     = document.getElementById('fileInput');
 const uploadProgress = document.getElementById('uploadProgress');
@@ -536,6 +520,9 @@ const uploadAnother = document.getElementById('uploadAnother');
 const errorMsg      = document.getElementById('errorMsg');
 
 dropZone.addEventListener('click', () => fileInput.click());
+dropZone.addEventListener('keydown', e => {
+  if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fileInput.click(); }
+});
 
 dropZone.addEventListener('dragover', e => {
   e.preventDefault();
@@ -606,16 +593,27 @@ function setupVisibility() {
     });
   }
 
+  function flashInvalid() {
+    input.style.transition = 'background 0.3s';
+    input.style.background = 'rgba(192,57,43,0.15)';
+    setTimeout(() => { input.style.background = ''; }, 600);
+  }
+
   function tryAdd(text) {
     const parts = text.split(/[\s,;]+/).map(s => s.trim().toLowerCase()).filter(Boolean);
+    if (!parts.length) return false;
     let added = 0;
+    let invalid = 0;
     for (const e of parts) {
       if (EMAIL_RE.test(e) && !_allowedEmails.includes(e) && _allowedEmails.length < 50) {
         _allowedEmails.push(e);
         added++;
+      } else if (!EMAIL_RE.test(e)) {
+        invalid++;
       }
     }
     if (added) renderChips();
+    if (invalid && !added) flashInvalid();
     return added > 0;
   }
 

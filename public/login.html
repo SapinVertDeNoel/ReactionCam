@@ -60,7 +60,15 @@ header { position: fixed; top: 0; left: 0; right: 0; height: 60px; padding: 0 40
 }
 .btn-submit:hover { background: #e0bb60; }
 .btn-submit:active { transform: scale(0.99); }
-.btn-submit:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-submit:disabled { opacity: 0.6; cursor: not-allowed; }
+.btn-submit.loading { position: relative; color: transparent !important; }
+.btn-submit.loading::after {
+  content: ''; position: absolute; top: 50%; left: 50%;
+  width: 16px; height: 16px; margin: -8px 0 0 -8px;
+  border: 2px solid rgba(10,10,10,0.3); border-top-color: #0a0a0a;
+  border-radius: 50%; animation: btnSpin 0.7s linear infinite;
+}
+@keyframes btnSpin { to { transform: rotate(360deg); } }
 
 .error { background: rgba(192,57,43,0.1); border: 1px solid rgba(192,57,43,0.3); border-radius: 2px; padding: 10px 14px; font-size: 12px; color: #e07060; margin-bottom: 16px; display: none; letter-spacing: 0.04em; }
 
@@ -238,10 +246,23 @@ document.getElementById('goBackLogin').addEventListener('click', e => { e.preven
 
 if (location.pathname === '/register') showRegister();
 
+try {
+  const flash = sessionStorage.getItem('rc-flash');
+  if (flash === 'logout') {
+    sessionStorage.removeItem('rc-flash');
+    window.addEventListener('load', () => {
+      if (window.RC && window.RC.toast) window.RC.toast('Déconnecté avec succès', { type: 'success' });
+    });
+  }
+} catch (e) {}
+
 async function apiPost(url, body) {
   const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
   return [r.ok, await r.json()];
 }
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+function isValidEmail(s) { return EMAIL_RE.test(String(s || '').trim()); }
 
 function setError(id, msg) {
   const el = document.getElementById(id);
@@ -251,39 +272,56 @@ function setError(id, msg) {
 // LOGIN
 document.getElementById('btnLogin').addEventListener('click', async () => {
   setError('loginError', '');
+  const email = document.getElementById('loginEmail').value;
+  const password = document.getElementById('loginPassword').value;
+  if (!isValidEmail(email)) { setError('loginError', 'Adresse email invalide.'); return; }
+  if (!password) { setError('loginError', 'Saisis ton mot de passe.'); return; }
   const btn = document.getElementById('btnLogin');
-  btn.disabled = true; btn.textContent = window.__('login.btn.logging-in');
-  const [ok, data] = await apiPost('/api/auth/login', {
-    email: document.getElementById('loginEmail').value,
-    password: document.getElementById('loginPassword').value
-  });
+  btn.disabled = true; btn.classList.add('loading');
+  let ok, data;
+  try {
+    [ok, data] = await apiPost('/api/auth/login', { email, password });
+  } catch (e) {
+    setError('loginError', 'Connexion impossible. Vérifie ton réseau.');
+    btn.disabled = false; btn.classList.remove('loading');
+    return;
+  }
   if (ok) {
     location.href = '/dashboard';
   } else if (data.needsVerification) {
     showVerify(data.email);
   } else {
     setError('loginError', data.error);
-    btn.disabled = false; btn.textContent = window.__('login.btn.login');
+    btn.disabled = false; btn.classList.remove('loading');
   }
 });
 
 // REGISTER
 document.getElementById('btnRegister').addEventListener('click', async () => {
   setError('registerError', '');
+  const name = document.getElementById('registerName').value.trim();
+  const email = document.getElementById('registerEmail').value;
+  const password = document.getElementById('registerPassword').value;
+  if (!name) { setError('registerError', 'Saisis ton nom.'); return; }
+  if (!isValidEmail(email)) { setError('registerError', 'Adresse email invalide.'); return; }
+  if (password.length < 6) { setError('registerError', 'Mot de passe trop court (6 caractères minimum).'); return; }
   const btn = document.getElementById('btnRegister');
-  btn.disabled = true; btn.textContent = window.__('login.btn.creating');
-  const [ok, data] = await apiPost('/api/auth/register', {
-    name: document.getElementById('registerName').value,
-    email: document.getElementById('registerEmail').value,
-    password: document.getElementById('registerPassword').value
-  });
+  btn.disabled = true; btn.classList.add('loading');
+  let ok, data;
+  try {
+    [ok, data] = await apiPost('/api/auth/register', { name, email, password });
+  } catch (e) {
+    setError('registerError', 'Connexion impossible. Vérifie ton réseau.');
+    btn.disabled = false; btn.classList.remove('loading');
+    return;
+  }
   if (ok && data.needsVerification) {
     showVerify(data.email);
   } else if (ok) {
     location.href = '/dashboard';
   } else {
     setError('registerError', data.error);
-    btn.disabled = false; btn.textContent = window.__('login.btn.register');
+    btn.disabled = false; btn.classList.remove('loading');
   }
 });
 

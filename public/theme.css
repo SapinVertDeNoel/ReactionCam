@@ -3,7 +3,20 @@
   --bg: #f5f1ea; --surface: #ffffff; --surface2: #f0ebe0;
   --border: #ddd5c8; --border2: #ccc4b8;
   --gold: #9a7220; --gold-dim: #b89040;
-  --text: #1c1610; --muted: #7a6a5a; --green: #2d6b42; --red: #c0392b;
+  --text: #1c1610; --muted: #5e4d3a; --green: #2d6b42; --red: #c0392b;
+}
+
+/* Transition douce lors du switch de thème, désactivée pour les utilisateurs
+   ayant activé prefers-reduced-motion. */
+@media (prefers-reduced-motion: no-preference) {
+  html.rc-theme-anim, html.rc-theme-anim body,
+  html.rc-theme-anim nav, html.rc-theme-anim header,
+  html.rc-theme-anim .card, html.rc-theme-anim .video-card,
+  html.rc-theme-anim .plan-card, html.rc-theme-anim .drop-zone,
+  html.rc-theme-anim .field input, html.rc-theme-anim .form-input,
+  html.rc-theme-anim .modal, html.rc-theme-anim .modal-content {
+    transition: background-color 0.25s ease, color 0.25s ease, border-color 0.25s ease;
+  }
 }
 [data-theme="light"] body::before { opacity: 0.10 !important; }
 [data-theme="light"] nav,

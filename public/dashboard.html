@@ -115,7 +115,8 @@ main { flex: 1; padding: 48px; max-width: 1200px; width: 100%; margin: 0 auto; }
 .status-processing { color: var(--gold); }
 .reaction-dl { display: flex; align-items: center; gap: 6px; background: none; border: 1px solid var(--border); border-radius: 2px; padding: 7px 12px; color: var(--muted); font-family: 'DM Mono', monospace; font-size: 10px; letter-spacing: 0.1em; cursor: pointer; transition: all 0.2s; text-decoration: none; flex-shrink: 0; }
 .reaction-dl:hover { color: var(--text); border-color: var(--muted); }
-.btn-delete { display: flex; align-items: center; gap: 5px; background: none; border: 1px solid transparent; border-radius: 2px; padding: 6px 10px; color: var(--muted); font-family: 'DM Mono', monospace; font-size: 10px; letter-spacing: 0.1em; cursor: pointer; transition: all 0.2s; flex-shrink: 0; }
+.btn-delete { display: inline-flex; align-items: center; justify-content: center; gap: 5px; background: none; border: 1px solid transparent; border-radius: 2px; padding: 8px 12px; min-width: 36px; min-height: 36px; color: var(--muted); font-family: 'DM Mono', monospace; font-size: 10px; letter-spacing: 0.1em; cursor: pointer; transition: all 0.2s; flex-shrink: 0; }
+.btn-delete svg { width: 14px; height: 14px; }
 .btn-delete:hover { color: #c0392b; border-color: rgba(192,57,43,0.3); }
 
 /* Onglets */
@@ -169,8 +170,11 @@ main { flex: 1; padding: 48px; max-width: 1200px; width: 100%; margin: 0 auto; }
 .modal-overlay.open { display: flex; }
 .modal-content { max-width: 800px; width: 100%; position: relative; display: flex; justify-content: center; }
 .modal-video { max-width: 100%; max-height: 80vh; border-radius: 3px; background: #000; object-fit: contain; }
-.modal-close { position: absolute; top: -40px; right: 0; background: none; border: none; color: var(--muted); font-size: 20px; cursor: pointer; font-family: 'DM Mono', monospace; letter-spacing: 0.1em; }
+.modal-close { position: absolute; top: -44px; right: 0; background: none; border: none; color: var(--muted); font-size: 20px; cursor: pointer; font-family: 'DM Mono', monospace; letter-spacing: 0.1em; padding: 8px 12px; min-height: 44px; }
 .modal-close:hover { color: var(--text); }
+@media (max-width: 600px) {
+  .modal-close { top: 8px; right: 8px; background: rgba(0,0,0,0.6); border-radius: 3px; }
+}
 
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 .app { animation: fadeIn 0.4s ease; }
@@ -188,7 +192,9 @@ main { flex: 1; padding: 48px; max-width: 1200px; width: 100%; margin: 0 auto; }
   .video-name { font-size: 12px; }
   .video-stats { gap: 10px; }
   .video-actions { gap: 6px; }
-  .btn-copy { padding: 6px 10px; }
+  .btn-copy { padding: 10px 14px; min-height: 36px; }
+  .btn-delete { min-width: 40px; min-height: 40px; padding: 10px; }
+  .btn-delete svg { width: 16px; height: 16px; }
   .reaction-row { padding: 12px 16px; gap: 10px; }
   .reaction-thumb { width: 70px; height: 40px; }
   .reaction-dl span { display: none; }
@@ -244,9 +250,9 @@ main { flex: 1; padding: 48px; max-width: 1200px; width: 100%; margin: 0 auto; }
 </div>
 
 <!-- Modal -->
-<div class="modal-overlay" id="modal">
+<div class="modal-overlay" id="modal" role="dialog" aria-modal="true" aria-label="Lecture vidéo">
   <div class="modal-content">
-    <button class="modal-close" id="modalClose" data-i18n="dashboard.modal.close">✕ fermer</button>
+    <button class="modal-close" id="modalClose" data-i18n="dashboard.modal.close" aria-label="Fermer la vidéo">✕ fermer</button>
     <video class="modal-video" id="modalVideo" controls playsinline></video>
   </div>
 </div>
@@ -269,15 +275,6 @@ async function init() {
   const r = await fetch('/api/auth/me');
   if (!r.ok) { location.href = '/login'; return; }
   me = await r.json();
-  // Mobile menu
-  window.RC.clearMobileLinks();
-  window.RC.addMobileLink(window.RC.makeMobileLink(me.name, '/account', true));
-  const mLogout = window.RC.makeMobileBtn(window.__('nav.logout'), false);
-  mLogout.addEventListener('click', async () => {
-    await fetch('/api/auth/logout', { method: 'POST' });
-    location.href = '/login';
-  });
-  window.RC.addMobileLink(mLogout);
 
   if (new URLSearchParams(location.search).get('upgrade') === 'success') {
     showToast(window.__('dashboard.toast.pro'));
@@ -403,10 +400,11 @@ function renderMyReactions(list) {
 async function deleteMyReaction(id) {
   if (!confirm('Supprimer cette réaction ?')) return;
   const r = await fetch(`/api/my-reactions/${id}`, { method: 'DELETE' });
-  if (!r.ok) { alert('Erreur lors de la suppression'); return; }
+  if (!r.ok) { showToast(window.__('dashboard.toast.delete-error') || 'Erreur lors de la suppression'); return; }
   _myReactions = _myReactions.filter(x => x.id !== id);
   document.getElementById('cntReactions').textContent = _myReactions.length;
   renderMyReactions(_myReactions);
+  showToast(window.__('dashboard.toast.deleted') || 'Réaction supprimée');
 }
 
 function renderPlanBar({ plan, planLabel, maxVideos, videoCount }) {
@@ -431,9 +429,16 @@ function renderPlanBar({ plan, planLabel, maxVideos, videoCount }) {
 async function openPortal() {
   const btn = document.getElementById('btnPortal');
   btn.textContent = window.__('dashboard.portal.loading');
-  const r = await fetch('/api/billing/portal', { method: 'POST' });
+  let r;
+  try {
+    r = await fetch('/api/billing/portal', { method: 'POST' });
+  } catch (e) {
+    btn.textContent = window.__('dashboard.plan.manage');
+    showToast('Connexion impossible. Réessaie dans un instant.');
+    return;
+  }
   const { url, error } = await r.json();
-  if (error) { btn.textContent = window.__('dashboard.plan.manage'); alert(error); return; }
+  if (error) { btn.textContent = window.__('dashboard.plan.manage'); showToast(error); return; }
   location.href = url;
 }
 
@@ -493,8 +498,10 @@ function renderDashboard(videos) {
         _dashData.videos = _dashData.videos.filter(x => x.id !== v.id);
         renderPlanBar(_dashData);
         if (!_dashData.videos.length) renderDashboard([]);
+        showToast(window.__('dashboard.toast.deleted') || 'Vidéo supprimée');
       } else {
         btn.disabled = false;
+        showToast(window.__('dashboard.toast.delete-error') || 'Erreur lors de la suppression');
       }
     });
     document.getElementById(`copy-${v.id}`).addEventListener('click', e => {
@@ -551,11 +558,11 @@ function renderVideoCard(v) {
         ${renderExpiry(v.expiresAt)}
       </div>
       <div class="video-actions">
-        <button class="btn-copy" id="copy-${v.id}">${window.__('dashboard.copy.link')}</button>
-        <button class="btn-delete" id="del-${v.id}" title="${window.__('dashboard.delete')}">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+        <button class="btn-copy" id="copy-${v.id}" aria-label="${window.__('dashboard.copy.link')}">${window.__('dashboard.copy.link')}</button>
+        <button class="btn-delete" id="del-${v.id}" title="${window.__('dashboard.delete')}" aria-label="${window.__('dashboard.delete')}">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
         </button>
-        <svg class="chevron" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+        <svg class="chevron" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
           <path d="M4 6l4 4 4-4"/>
         </svg>
       </div>

@@ -240,16 +240,22 @@ body.playing .logo { display: none !important; }
   #screenCam .card > svg:first-child { width: 32px !important; height: 32px !important; margin-bottom: 12px !important; }
 }
 
-/* Orientation portrait sur mobile : suggestion douce */
+/* Orientation portrait sur mobile : message lisible */
 @media (max-width: 600px) and (orientation: portrait) {
   #screenPlayer::after {
-    display: flex;
-    content: 'Rotate for a better view';
-    position: fixed; bottom: 16px; left: 0; right: 0;
+    display: flex; align-items: center; gap: 8px;
+    content: '↻  Tourne ton téléphone pour mieux voir';
+    position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
     justify-content: center;
-    font-size: 10px; letter-spacing: 0.12em;
-    color: rgba(255,255,255,0.2);
+    padding: 8px 14px;
+    background: rgba(0,0,0,0.7);
+    border: 1px solid rgba(201,168,76,0.4);
+    border-radius: 3px;
+    font-size: 11px; letter-spacing: 0.06em;
+    color: rgba(232,224,208,0.95);
     pointer-events: none;
+    z-index: 50;
+    backdrop-filter: blur(4px);
   }
 }
 </style>

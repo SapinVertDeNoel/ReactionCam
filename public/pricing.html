@@ -114,7 +114,16 @@
     background: var(--gold); color: #0a0a0a;
   }
   .btn-plan.primary:hover { background: #e0bb60; }
-  .btn-plan:disabled { opacity: 0.5; cursor: not-allowed; }
+  .btn-plan:disabled { opacity: 0.6; cursor: not-allowed; }
+  .btn-plan.loading { position: relative; color: transparent !important; }
+  .btn-plan.loading::after {
+    content: ''; position: absolute; top: 50%; left: 50%;
+    width: 16px; height: 16px; margin: -8px 0 0 -8px;
+    border: 2px solid rgba(10,10,10,0.3); border-top-color: #0a0a0a;
+    border-radius: 50%; animation: btnSpin 0.7s linear infinite;
+  }
+  .btn-plan.secondary.loading::after { border-color: rgba(232,224,208,0.2); border-top-color: var(--gold); }
+  @keyframes btnSpin { to { transform: rotate(360deg); } }
 
   /* ── FAQ ── */
   .faq { max-width: 640px; margin: 0 auto; padding: 0 48px 80px; }
@@ -240,24 +249,12 @@
 <script>
 let me = null;
 
-// Mobile menu — état initial (non connecté)
-document.addEventListener('rc-mobile-ready', function () {
-  window.RC.addMobileLink(window.RC.makeMobileLink(window.__('nav.home'), '/', false, 'nav.home'));
-  window.RC.addMobileLink(window.RC.makeMobileLink(window.__('nav.login'), '/login', false, 'nav.login'));
-  window.RC.addMobileLink(window.RC.makeMobileLink(window.__('nav.register'), '/register', true, 'nav.register'));
-});
-
 fetch('/api/auth/me').then(r => {
   if (!r.ok) return;
   return r.json();
 }).then(u => {
   if (!u) return;
   me = u;
-  // Mobile menu — état connecté
-  window.RC.clearMobileLinks();
-  window.RC.addMobileLink(window.RC.makeMobileLink(window.__('nav.home'), '/', false, 'nav.home'));
-  window.RC.addMobileLink(window.RC.makeMobileLink(window.__('nav.dashboard'), '/dashboard', false, 'nav.dashboard'));
-  window.RC.addMobileLink(window.RC.makeMobileLink(u.name, '/account', true));
 
   if (u.plan === 'pro' || u.plan === 'admin') {
     const btn = document.getElementById('btnPro');
@@ -295,27 +292,50 @@ async function startCheckout() {
 
   const btn = document.getElementById('btnPro');
   btn.disabled = true;
-  btn.textContent = window.__('loading');
+  btn.classList.add('loading');
 
-  const r = await fetch('/api/billing/checkout', { method: 'POST' });
+  function resetBtn() { btn.disabled = false; btn.classList.remove('loading'); }
+  let r;
+  try {
+    r = await fetch('/api/billing/checkout', { method: 'POST' });
+  } catch (e) {
+    resetBtn();
+    window.RC.toast('Connexion impossible. Vérifie ta connexion internet.', { type: 'error' });
+    return;
+  }
   if (r.status === 503) {
-    btn.disabled = false;
-    btn.textContent = window.__('pricing.btn.pro');
-    alert('Le paiement n\'est pas encore configuré.');
+    resetBtn();
+    window.RC.toast('Le paiement n\'est pas encore configuré. Reviens plus tard.', { type: 'error', duration: 5000 });
     return;
   }
   const { url, error } = await r.json();
-  if (error) { btn.disabled = false; btn.textContent = window.__('pricing.btn.pro'); alert(error); return; }
+  if (error) {
+    resetBtn();
+    window.RC.toast(error, { type: 'error' });
+    return;
+  }
   location.href = url;
 }
 
 async function openPortal() {
   const btn = document.getElementById('btnPro');
   btn.disabled = true;
-  btn.textContent = window.__('loading');
-  const r = await fetch('/api/billing/portal', { method: 'POST' });
+  btn.classList.add('loading');
+  function resetBtn() { btn.disabled = false; btn.classList.remove('loading'); }
+  let r;
+  try {
+    r = await fetch('/api/billing/portal', { method: 'POST' });
+  } catch (e) {
+    resetBtn();
+    window.RC.toast('Connexion impossible. Réessaie dans un instant.', { type: 'error' });
+    return;
+  }
   const { url, error } = await r.json();
-  if (error) { btn.disabled = false; btn.textContent = window.__('pricing.btn.pro.manage'); alert(error); return; }
+  if (error) {
+    resetBtn();
+    window.RC.toast(error, { type: 'error' });
+    return;
+  }
   location.href = url;
 }
 </script>

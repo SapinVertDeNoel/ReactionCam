@@ -9,6 +9,7 @@
       'nav.login':    'Connexion',
       'nav.register': 'Créer un compte',
       'nav.dashboard':'Mon espace',
+      'nav.account':  'Mon compte',
       'nav.logout':   'Déconnexion',
       'nav.upload':   'Uploader une vidéo',
       'copy':         'Copier',
@@ -134,6 +135,7 @@
       'nav.login':    'Login',
       'nav.register': 'Sign up',
       'nav.dashboard':'My space',
+      'nav.account':  'My account',
       'nav.logout':   'Logout',
       'nav.upload':   'Upload a video',
       'copy':         'Copy',
@@ -259,6 +261,7 @@
       'nav.login':    'Iniciar sesión',
       'nav.register': 'Crear cuenta',
       'nav.dashboard':'Mi espacio',
+      'nav.account':  'Mi cuenta',
       'nav.logout':   'Cerrar sesión',
       'nav.upload':   'Subir un vídeo',
       'copy':         'Copiar',
@@ -495,8 +498,8 @@
       '#rc-cookie-accept:hover { background:#e0bb60; }',
       /* Mobile menu button */
       '#rc-mobile-btn {',
-      '  display:none; align-items:center; justify-content:center;',
-      '  width:32px; height:32px; margin-left:auto; flex-shrink:0;',
+      '  display:flex; align-items:center; justify-content:center;',
+      '  width:32px; height:32px; flex-shrink:0;',
       '  background:none; border:1px solid var(--border); border-radius:2px;',
       '  color:var(--muted); cursor:pointer; padding:0;',
       '  transition:color 0.2s, border-color 0.2s;',
@@ -532,10 +535,20 @@
       '.rc-mob-lang button:last-child { border-right:none; }',
       '.rc-mob-lang button:hover { color:var(--text); background:var(--surface2,#1a1a1a); }',
       '.rc-mob-lang button.rc-lang-active { color:var(--gold); }',
-      '@media (max-width:600px) {',
-      '  #rc-controls-mount { display:none !important; }',
-      '  #rc-mobile-btn { display:flex !important; }',
+      '#rc-controls-mount { display:none !important; }',
+      /* Toast */
+      '.rc-toast {',
+      '  position:fixed; left:50%; bottom:32px; transform:translateX(-50%) translateY(20px);',
+      '  background:var(--surface,#111); color:var(--text,#e8e0d0);',
+      '  border:1px solid var(--border,#222); border-left:3px solid var(--gold,#c9a84c);',
+      '  padding:12px 20px; border-radius:3px; max-width:90vw; min-width:200px;',
+      '  font-family:"DM Mono",monospace; font-size:12px; letter-spacing:0.04em; line-height:1.5;',
+      '  box-shadow:0 8px 24px rgba(0,0,0,0.4); z-index:1000;',
+      '  opacity:0; transition:opacity 0.25s, transform 0.25s; pointer-events:none;',
       '}',
+      '.rc-toast.show { opacity:1; transform:translateX(-50%) translateY(0); }',
+      '.rc-toast-success { border-left-color:var(--green,#4a7c59); }',
+      '.rc-toast-error { border-left-color:#c0392b; }',
     ].join('\n');
     document.head.appendChild(style);
   }
@@ -548,9 +561,12 @@
     var themeBtn = document.createElement('button');
     themeBtn.id = 'rc-theme-btn';
     themeBtn.title = 'Toggle theme';
+    themeBtn.setAttribute('aria-label', window.RC_THEME === 'dark' ? 'Passer en mode clair' : 'Passer en mode sombre');
     themeBtn.innerHTML = window.RC_THEME === 'dark' ? SUN_ICON : MOON_ICON;
     themeBtn.addEventListener('click', function () {
-      applyTheme(window.RC_THEME === 'dark' ? 'light' : 'dark');
+      var next = window.RC_THEME === 'dark' ? 'light' : 'dark';
+      applyTheme(next);
+      themeBtn.setAttribute('aria-label', next === 'dark' ? 'Passer en mode clair' : 'Passer en mode sombre');
     });
     mount.appendChild(themeBtn);
 
@@ -559,21 +575,28 @@
 
     var trigger = document.createElement('button');
     trigger.id = 'rc-lang-trigger';
+    trigger.setAttribute('aria-label', 'Choisir la langue');
+    trigger.setAttribute('aria-haspopup', 'menu');
+    trigger.setAttribute('aria-expanded', 'false');
     trigger.innerHTML = '<span id="rc-lang-label">' + window.RC_LANG.toUpperCase() + '</span>'
-      + '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>';
+      + '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>';
 
     var menu = document.createElement('div');
     menu.className = 'rc-lang-menu';
+    menu.setAttribute('role', 'menu');
 
     ['fr', 'en', 'es'].forEach(function (l) {
       var btn = document.createElement('button');
       btn.dataset.lang = l;
+      btn.setAttribute('role', 'menuitem');
+      btn.setAttribute('aria-label', 'Passer en ' + l.toUpperCase());
       btn.textContent = l.toUpperCase();
       if (l === window.RC_LANG) btn.classList.add('rc-lang-active');
       btn.addEventListener('click', function () {
         applyLang(l);
         menu.classList.remove('open');
         trigger.classList.remove('open');
+        trigger.setAttribute('aria-expanded', 'false');
       });
       menu.appendChild(btn);
     });
@@ -582,11 +605,13 @@
       e.stopPropagation();
       var isOpen = menu.classList.toggle('open');
       trigger.classList.toggle('open', isOpen);
+      trigger.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
     });
 
     document.addEventListener('click', function () {
       menu.classList.remove('open');
       trigger.classList.remove('open');
+      trigger.setAttribute('aria-expanded', 'false');
     });
 
     dd.appendChild(trigger);
@@ -600,11 +625,14 @@
     var mBtn = document.createElement('button');
     mBtn.id = 'rc-mobile-btn';
     mBtn.setAttribute('aria-label', 'Menu');
+    mBtn.setAttribute('aria-expanded', 'false');
+    mBtn.setAttribute('aria-haspopup', 'menu');
     mBtn.innerHTML = DOTS_ICON;
     parent.appendChild(mBtn);
 
     var mDD = document.createElement('div');
     mDD.id = 'rc-mobile-dd';
+    mDD.setAttribute('role', 'menu');
 
     // Theme row
     var mThemeBtn = document.createElement('button');
@@ -649,10 +677,12 @@
       e.stopPropagation();
       var open = mDD.classList.toggle('open');
       mBtn.classList.toggle('open', open);
+      mBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
     });
     document.addEventListener('click', function () {
       mDD.classList.remove('open');
       mBtn.classList.remove('open');
+      mBtn.setAttribute('aria-expanded', 'false');
     });
     mDD.addEventListener('click', function (e) { e.stopPropagation(); });
 
@@ -682,10 +712,35 @@
     document.body.appendChild(banner);
   }
 
+  // ── Toast ─────────────────────────────────────────────────────────────────────
+  function showToast(message, opts) {
+    opts = opts || {};
+    var type = opts.type || 'info'; // 'info' | 'success' | 'error'
+    var duration = typeof opts.duration === 'number' ? opts.duration : 3500;
+
+    var existing = document.getElementById('rc-toast');
+    if (existing) existing.remove();
+
+    var t = document.createElement('div');
+    t.id = 'rc-toast';
+    t.className = 'rc-toast rc-toast-' + type;
+    t.setAttribute('role', type === 'error' ? 'alert' : 'status');
+    t.setAttribute('aria-live', type === 'error' ? 'assertive' : 'polite');
+    t.textContent = message;
+    document.body.appendChild(t);
+
+    requestAnimationFrame(function () { t.classList.add('show'); });
+    setTimeout(function () {
+      t.classList.remove('show');
+      setTimeout(function () { if (t.parentNode) t.remove(); }, 250);
+    }, duration);
+  }
+
   // ── Public API ────────────────────────────────────────────────────────────────
   window.RC = {
     applyTheme: applyTheme,
     applyLang: applyLang,
+    toast: showToast,
     addMobileLink: function (el) {
       var nav = document.getElementById('rc-mobile-nav');
       if (nav) nav.appendChild(el);
@@ -724,5 +779,9 @@
     buildControls();
     applyLang(window.RC_LANG);
     buildCookieBanner();
+    // Activer les transitions de thème uniquement après le rendu initial
+    requestAnimationFrame(function () {
+      document.documentElement.classList.add('rc-theme-anim');
+    });
   });
 })();

@@ -77,7 +77,16 @@
     transition: background 0.2s;
   }
   .btn-submit:hover { background: #dbb85c; }
-  .btn-submit:disabled { opacity: 0.5; cursor: not-allowed; }
+  .btn-submit:disabled { opacity: 0.6; cursor: not-allowed; }
+  .btn-submit.loading, .btn-modal-danger.loading { position: relative; color: transparent !important; }
+  .btn-submit.loading::after, .btn-modal-danger.loading::after {
+    content: ''; position: absolute; top: 50%; left: 50%;
+    width: 14px; height: 14px; margin: -7px 0 0 -7px;
+    border: 2px solid rgba(10,10,10,0.3); border-top-color: #0a0a0a;
+    border-radius: 50%; animation: btnSpin 0.7s linear infinite;
+  }
+  .btn-modal-danger.loading::after { border-color: rgba(255,255,255,0.3); border-top-color: #fff; }
+  @keyframes btnSpin { to { transform: rotate(360deg); } }
   .btn-danger-full {
     background: none; border: 1px solid #4a1a1a; color: var(--red);
     padding: 10px 22px; border-radius: var(--radius); font-family: 'DM Mono', monospace;
@@ -120,6 +129,10 @@
     nav { height: 62px; padding: 0 18px; }
     main { padding: 32px 16px; }
     .card { padding: 20px; }
+    .form-input { font-size: 16px; } /* évite le zoom auto iOS */
+    .btn-submit, .btn-danger-full { width: 100%; min-height: 44px; }
+    .modal-actions { flex-direction: column-reverse; }
+    .btn-modal-cancel, .btn-modal-danger { width: 100%; min-height: 44px; }
   }
 </style>
 <link rel="stylesheet" href="/theme.css">
@@ -202,9 +215,9 @@
 </main>
 
 <!-- Modal suppression compte -->
-<div class="modal-overlay" id="deleteModal">
+<div class="modal-overlay" id="deleteModal" role="dialog" aria-modal="true" aria-labelledby="deleteModalTitle">
   <div class="modal">
-    <h3>Supprimer mon compte</h3>
+    <h3 id="deleteModalTitle">Supprimer mon compte</h3>
     <p>
       Toutes tes vidéos et réactions seront effacées.<br>
       <strong style="color:var(--text)" id="modalPwdNote"></strong>
@@ -257,14 +270,15 @@ async function changeName() {
   const feed = document.getElementById('feedName');
   const name = document.getElementById('inputName').value.trim();
   if (!name) { setFeed(feed, 'Saisis un nom.', 'err'); return; }
-  btn.disabled = true;
+  btn.disabled = true; btn.classList.add('loading');
   try {
     await api('/api/account/name', { method: 'PATCH', body: JSON.stringify({ name }) });
     setFeed(feed, 'Nom mis à jour.', 'ok');
     document.getElementById('infoName').textContent = name;
+    if (window.RC && window.RC.toast) window.RC.toast('Nom mis à jour', { type: 'success' });
   } catch (e) {
     setFeed(feed, e.message, 'err');
-  } finally { btn.disabled = false; }
+  } finally { btn.disabled = false; btn.classList.remove('loading'); }
 }
 
 // ── Changer le mot de passe ───────────────────────────────────────────────────
@@ -277,16 +291,17 @@ async function changePassword() {
   if (!current)        { setFeed(feed, 'Saisis ton mot de passe actuel.', 'err'); return; }
   if (next.length < 6) { setFeed(feed, 'Nouveau mot de passe trop court (6 min).', 'err'); return; }
   if (next !== confirm) { setFeed(feed, 'Les mots de passe ne correspondent pas.', 'err'); return; }
-  btn.disabled = true;
+  btn.disabled = true; btn.classList.add('loading');
   try {
     await api('/api/account/change-password', { method: 'POST', body: JSON.stringify({ currentPassword: current, newPassword: next }) });
     setFeed(feed, 'Mot de passe modifié.', 'ok');
     document.getElementById('inputCurrentPwd').value = '';
     document.getElementById('inputNewPwd').value     = '';
     document.getElementById('inputConfirmPwd').value = '';
+    if (window.RC && window.RC.toast) window.RC.toast('Mot de passe modifié', { type: 'success' });
   } catch (e) {
     setFeed(feed, e.message, 'err');
-  } finally { btn.disabled = false; }
+  } finally { btn.disabled = false; btn.classList.remove('loading'); }
 }
 
 // ── Supprimer le compte ───────────────────────────────────────────────────────
@@ -303,13 +318,14 @@ async function deleteAccount() {
   const btn      = document.getElementById('btnDelete');
   const feed     = document.getElementById('feedDelete');
   const password = document.getElementById('modalPwd').value;
-  btn.disabled = true;
+  btn.disabled = true; btn.classList.add('loading');
   try {
     await api('/api/account', { method: 'DELETE', body: JSON.stringify({ password }) });
-    window.location = '/';
+    if (window.RC && window.RC.toast) window.RC.toast('Compte supprimé. À bientôt.', { type: 'success' });
+    setTimeout(function () { window.location = '/'; }, 800);
   } catch (e) {
     setFeed(feed, e.message, 'err');
-    btn.disabled = false;
+    btn.disabled = false; btn.classList.remove('loading');
   }
 }
 
