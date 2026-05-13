@@ -1,0 +1,113 @@
+# Render Blueprint — déclaration d'infrastructure pour reaction-cam.com
+# Doc : https://render.com/docs/blueprint-spec
+#
+# Les variables marquées sync: false doivent être renseignées dans le dashboard
+# Render (Service > Environment) — elles ne sont jamais commitées en clair ici.
+
+services:
+  # ── Application web ─────────────────────────────────────────────────────────
+  - type: web
+    name: reactioncam
+    runtime: node
+    plan: starter           # à passer à standard pour la prod (auto-scale + plus de RAM)
+    region: frankfurt       # proximité utilisateurs UE + conformité RGPD
+    branch: main
+    autoDeploy: true
+    healthCheckPath: /healthz
+    buildCommand: npm ci --legacy-peer-deps
+    startCommand: node server.js
+
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NODE_VERSION
+        value: "22"
+
+      # ── Secrets (à renseigner dans le dashboard) ────────────────────────────
+      - key: MONGODB_URI
+        sync: false
+      - key: SESSION_SECRET
+        generateValue: true   # Render génère une valeur cryptographique à la création
+      - key: ADMIN_EMAILS
+        sync: false
+
+      - key: CLOUDINARY_CLOUD_NAME
+        sync: false
+      - key: CLOUDINARY_API_KEY
+        sync: false
+      - key: CLOUDINARY_API_SECRET
+        sync: false
+
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false
+      - key: STRIPE_PRICE_ID
+        sync: false
+
+      - key: RESEND_API_KEY
+        sync: false
+
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: GOOGLE_CALLBACK_URL
+        value: https://reaction-cam.com/auth/google/callback
+
+      - key: ADMIN_KEY
+        generateValue: true
+
+      # ── Observabilité ────────────────────────────────────────────────────────
+      - key: SENTRY_DSN
+        sync: false
+      - key: SENTRY_TRACES_SAMPLE_RATE
+        value: "0.1"
+      - key: LOG_LEVEL
+        value: info
+
+  # ── Cron : purge nocturne (vidéos expirées + tokens de vérif) ────────────────
+  # Sortie du cron node-cron interne → déclenche /api/admin/cleanup en HTTP.
+  # Évite la double exécution si l'app passe en multi-instance.
+  - type: cron
+    name: reactioncam-cleanup
+    runtime: node
+    plan: starter
+    region: frankfurt
+    branch: main
+    schedule: "0 3 * * *"     # 3h UTC chaque nuit
+    buildCommand: npm ci --legacy-peer-deps
+    startCommand: |
+      curl -fsS -X POST https://reaction-cam.com/api/admin/cleanup \
+        -H "X-Admin-Key: $ADMIN_KEY" \
+        -H "Content-Type: application/json" \
+        --max-time 600 && echo "cleanup ok"
+    envVars:
+      - key: ADMIN_KEY
+        fromService:
+          name: reactioncam
+          type: web
+          envVarKey: ADMIN_KEY
+
+  # ── Cron : rejeu de la file d'emails ────────────────────────────────────────
+  # Toutes les 5 min : repush les emails `pending` dont le backoff a expiré
+  # (2/4/8/16/32 min après échec). Indispensable si Resend a un incident court.
+  - type: cron
+    name: reactioncam-email-queue
+    runtime: node
+    plan: starter
+    region: frankfurt
+    branch: main
+    schedule: "*/5 * * * *"
+    buildCommand: npm ci --legacy-peer-deps
+    startCommand: |
+      curl -fsS -X POST https://reaction-cam.com/api/admin/process-email-queue \
+        -H "X-Admin-Key: $ADMIN_KEY" \
+        -H "Content-Type: application/json" \
+        --max-time 120 && echo "email queue ok"
+    envVars:
+      - key: ADMIN_KEY
+        fromService:
+          name: reactioncam
+          type: web
+          envVarKey: ADMIN_KEY

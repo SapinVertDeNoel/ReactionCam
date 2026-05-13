@@ -10,9 +10,23 @@
 <link rel="manifest" href="/site.webmanifest">
 <meta name="theme-color" content="#c9a84c">
 <script>document.documentElement.setAttribute('data-theme',localStorage.getItem('rc-theme')||'dark')</script>
+<script src="/rc-csrf.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ReactionCam</title>
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet">
+<meta name="description" content="Politique de confidentialité ReactionCam — données collectées, droits RGPD, sous-traitants, durées de conservation.">
+<link rel="canonical" href="https://reaction-cam.com/privacy">
+<link rel="alternate" hreflang="fr" href="https://reaction-cam.com/privacy">
+<link rel="alternate" hreflang="en" href="https://reaction-cam.com/privacy">
+<link rel="alternate" hreflang="es" href="https://reaction-cam.com/privacy">
+<link rel="alternate" hreflang="x-default" href="https://reaction-cam.com/privacy">
+<title>Politique de confidentialité — ReactionCam</title>
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="ReactionCam">
+<meta property="og:url" content="https://reaction-cam.com/privacy">
+<meta property="og:title" content="Politique de confidentialité — ReactionCam">
+<meta property="og:description" content="Comment ReactionCam traite vos données personnelles (RGPD).">
+<meta property="og:image" content="https://reaction-cam.com/og-image.jpg">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="/fonts.css">
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 :root {
@@ -72,7 +86,7 @@ footer a { color: var(--gold); }
 <!-- ══════════════════════════════════════════════════════════════════ FR -->
 <div class="lang-block" data-privacy-lang="fr">
   <h1>Politique de confidentialité</h1>
-  <p class="updated">Dernière mise à jour : avril 2025 · Version 1.0</p>
+  <p class="updated">Dernière mise à jour : mai 2026 · Version 1.1</p>
 
   <p>La présente politique décrit comment <strong>ReactionCam</strong> (ci-après « nous », « notre service ») collecte, utilise et protège les données personnelles des utilisateurs (ci-après « vous ») conformément au Règlement Général sur la Protection des Données (RGPD – UE 2016/679) et à la Directive ePrivacy 2002/58/CE.</p>
 
@@ -178,7 +192,7 @@ footer a { color: var(--gold); }
       <tr><td>Cloudinary Ltd</td><td>Hébergement et traitement des fichiers vidéo</td><td>États-Unis (Santa Clara, CA)</td></tr>
       <tr><td>MongoDB, Inc.</td><td>Base de données (comptes, métadonnées)</td><td>États-Unis / Union européenne selon configuration</td></tr>
       <tr><td>Stripe, Inc.</td><td>Traitement des paiements et abonnements</td><td>États-Unis (San Francisco, CA)</td></tr>
-      <tr><td>Google Ireland Ltd / Google LLC</td><td>Connexion OAuth (optionnelle) ; polices web (Google Fonts)</td><td>Irlande / États-Unis</td></tr>
+      <tr><td>Google Ireland Ltd / Google LLC</td><td>Connexion OAuth (optionnelle, uniquement si vous cliquez sur « Continuer avec Google »)</td><td>Irlande / États-Unis</td></tr>
       <tr><td>Resend, Inc.</td><td>Envoi d'emails transactionnels (vérification d'adresse)</td><td>États-Unis</td></tr>
       <tr><td>Render Services, Inc.</td><td>Hébergement de l'application</td><td>États-Unis</td></tr>
     </tbody>
@@ -187,7 +201,6 @@ footer a { color: var(--gold); }
 
   <h2>6. Transferts en dehors de l'Union européenne</h2>
   <p>Certains sous-traitants listés ci-dessus sont établis aux États-Unis. Ces transferts sont encadrés par les <strong>Clauses Contractuelles Types (CCT)</strong> adoptées par la Commission européenne (décision 2021/914), qui offrent des garanties appropriées conformément à l'Art. 46 RGPD. Vous pouvez obtenir une copie de ces garanties en nous contactant.</p>
-  <p>Concernant <strong>Google Fonts</strong> : lors du chargement des pages, votre navigateur effectue une requête vers les serveurs de Google pour récupérer les polices de caractères. Cette requête transmet votre adresse IP à Google. Nous envisageons d'auto-héberger ces polices dans une prochaine version afin d'éliminer ce transfert.</p>
 
   <h2>7. Cookies et stockage local</h2>
   <p>Ce site utilise un nombre minimal de cookies et d'éléments de stockage, tous exemptés de consentement conformément à l'Art. 5(3) de la Directive ePrivacy et aux lignes directrices de la CNIL :</p>
@@ -216,6 +229,7 @@ footer a { color: var(--gold); }
     <li><strong>Droit de retrait du consentement</strong> — retirer à tout moment un consentement préalablement donné (sans affecter la licéité du traitement antérieur)</li>
   </ul>
   <p>Pour exercer ces droits, contactez-nous à <a href="mailto:contact@reaction-cam.com">contact@reaction-cam.com</a>. Nous répondrons dans un délai d'un mois (Art. 12 RGPD). En cas de réponse insatisfaisante, vous pouvez introduire une réclamation auprès de la <strong>CNIL</strong> (<a href="https://www.cnil.fr" target="_blank" rel="noopener">cnil.fr</a>) ou de l'autorité de contrôle de votre pays de résidence.</p>
+  <p>Outils en libre-service depuis votre <a href="/account">page de compte</a> : téléchargement de l'ensemble de vos données au format JSON (portabilité), modification de vos informations, et suppression définitive de votre compte (effacement).</p>
 
   <h2>9. Protection des mineurs</h2>
   <p>Ce service est destiné aux personnes âgées d'au moins 15 ans (ou l'âge du consentement numérique applicable dans votre pays de résidence). Si vous êtes mineur, l'accord d'un parent ou tuteur légal est requis. Nous ne collectons pas sciemment de données de personnes en dessous de cet âge.</p>
@@ -223,7 +237,22 @@ footer a { color: var(--gold); }
   <h2>10. Sécurité des données</h2>
   <p>Nous mettons en œuvre des mesures techniques et organisationnelles adaptées pour protéger vos données : chiffrement HTTPS, hachage des mots de passe (bcrypt, facteur de coût 10), cookies de session HTTP-only et Secure en production, accès aux bases de données restreint par authentification. En cas de violation de données susceptible d'affecter vos droits, nous vous en informerons conformément à l'Art. 34 RGPD.</p>
 
-  <h2>11. Contact et modifications</h2>
+  <h2>11. Signalement de contenu (DSA)</h2>
+  <p>Conformément au <strong>Règlement européen sur les services numériques (DSA, UE 2022/2065)</strong>, vous pouvez signaler un contenu illicite hébergé sur ReactionCam :</p>
+  <ul>
+    <li>Via le bouton <strong>« Signaler ce contenu »</strong> présent sur chaque page de visionnage <code>/watch/:id</code></li>
+    <li>Par email à <a href="mailto:contact@reaction-cam.com">contact@reaction-cam.com</a> en indiquant l'URL et le motif</li>
+  </ul>
+  <p>Chaque signalement est examiné dans un délai raisonnable. Les contenus manifestement illicites sont retirés sans préavis. Les utilisateurs auteurs de signalements répétés et manifestement infondés s'exposent aux sanctions prévues à l'article 6-I-4 LCEN.</p>
+
+  <h2>12. Documents associés</h2>
+  <p>Les présentes règles s'articulent avec :</p>
+  <ul>
+    <li><a href="/terms">Conditions Générales d'Utilisation (CGU)</a> — vos droits et obligations en tant qu'utilisateur</li>
+    <li><a href="/legal">Mentions légales</a> — informations sur l'éditeur, l'hébergeur et les sous-traitants</li>
+  </ul>
+
+  <h2>13. Contact et modifications</h2>
   <p>Pour toute question relative à cette politique ou à vos données personnelles : <a href="mailto:contact@reaction-cam.com">contact@reaction-cam.com</a></p>
   <p>Nous nous réservons le droit de modifier cette politique à tout moment. En cas de modification substantielle, vous serez informé par email (si vous êtes inscrit) ou par une notice visible sur le site. La date de mise à jour en haut de page indique la version en vigueur.</p>
   <p>La présente politique est rédigée en français, langue faisant foi. Des traductions à titre indicatif peuvent être disponibles.</p>
@@ -232,7 +261,7 @@ footer a { color: var(--gold); }
 <!-- ══════════════════════════════════════════════════════════════════ EN -->
 <div class="lang-block" data-privacy-lang="en" style="display:none">
   <h1>Privacy Policy</h1>
-  <p class="updated">Last updated: April 2025 · Version 1.0</p>
+  <p class="updated">Last updated: May 2026 · Version 1.1</p>
 
   <p>This policy describes how <strong>ReactionCam</strong> (hereinafter "we", "our service") collects, uses and protects the personal data of users (hereinafter "you") in accordance with the General Data Protection Regulation (GDPR – EU 2016/679) and the ePrivacy Directive 2002/58/EC.</p>
 
@@ -338,7 +367,7 @@ footer a { color: var(--gold); }
       <tr><td>Cloudinary Ltd</td><td>Video file hosting and processing</td><td>United States (Santa Clara, CA)</td></tr>
       <tr><td>MongoDB, Inc.</td><td>Database (accounts, metadata)</td><td>United States / European Union depending on configuration</td></tr>
       <tr><td>Stripe, Inc.</td><td>Payment and subscription processing</td><td>United States (San Francisco, CA)</td></tr>
-      <tr><td>Google Ireland Ltd / Google LLC</td><td>Optional OAuth login; web fonts (Google Fonts)</td><td>Ireland / United States</td></tr>
+      <tr><td>Google Ireland Ltd / Google LLC</td><td>Optional OAuth login (only if you click "Continue with Google")</td><td>Ireland / United States</td></tr>
       <tr><td>Resend, Inc.</td><td>Transactional email sending (address verification)</td><td>United States</td></tr>
       <tr><td>Render Services, Inc.</td><td>Application hosting</td><td>United States</td></tr>
     </tbody>
@@ -347,7 +376,6 @@ footer a { color: var(--gold); }
 
   <h2>6. Transfers Outside the European Union</h2>
   <p>Some sub-processors listed above are based in the United States. These transfers are governed by the <strong>Standard Contractual Clauses (SCC)</strong> adopted by the European Commission (decision 2021/914), which provide appropriate safeguards in accordance with Art. 46 GDPR. You may obtain a copy of these safeguards by contacting us.</p>
-  <p>Regarding <strong>Google Fonts</strong>: when loading pages, your browser makes a request to Google's servers to retrieve web fonts. This request transmits your IP address to Google. We plan to self-host these fonts in a future version to eliminate this transfer.</p>
 
   <h2>7. Cookies and Local Storage</h2>
   <p>This site uses a minimal number of cookies and storage items, all exempt from consent in accordance with Art. 5(3) of the ePrivacy Directive and CNIL guidelines:</p>
@@ -376,6 +404,7 @@ footer a { color: var(--gold); }
     <li><strong>Right to withdraw consent</strong> — withdraw consent at any time (without affecting the lawfulness of prior processing)</li>
   </ul>
   <p>To exercise these rights, contact us at <a href="mailto:contact@reaction-cam.com">contact@reaction-cam.com</a>. We will respond within one month (Art. 12 GDPR). If unsatisfied with our response, you may lodge a complaint with the <strong>CNIL</strong> (<a href="https://www.cnil.fr" target="_blank" rel="noopener">cnil.fr</a>) or the supervisory authority in your country of residence.</p>
+  <p>Self-service tools available from your <a href="/account">account page</a>: download all your data as JSON (portability), update your information, and permanently delete your account (erasure).</p>
 
   <h2>9. Protection of Minors</h2>
   <p>This service is intended for persons aged at least 15 years (or the digital consent age applicable in your country of residence). If you are a minor, parental or legal guardian consent is required. We do not knowingly collect data from persons below this age.</p>
@@ -392,7 +421,7 @@ footer a { color: var(--gold); }
 <!-- ══════════════════════════════════════════════════════════════════ ES -->
 <div class="lang-block" data-privacy-lang="es" style="display:none">
   <h1>Política de privacidad</h1>
-  <p class="updated">Última actualización: abril de 2025 · Versión 1.0</p>
+  <p class="updated">Última actualización: mayo de 2026 · Versión 1.1</p>
 
   <p>Esta política describe cómo <strong>ReactionCam</strong> (en adelante «nosotros», «nuestro servicio») recopila, utiliza y protege los datos personales de los usuarios (en adelante «usted») de conformidad con el Reglamento General de Protección de Datos (RGPD – UE 2016/679) y la Directiva ePrivacy 2002/58/CE.</p>
 
@@ -498,7 +527,7 @@ footer a { color: var(--gold); }
       <tr><td>Cloudinary Ltd</td><td>Alojamiento y procesamiento de archivos de vídeo</td><td>Estados Unidos (Santa Clara, CA)</td></tr>
       <tr><td>MongoDB, Inc.</td><td>Base de datos (cuentas, metadatos)</td><td>Estados Unidos / Unión Europea según configuración</td></tr>
       <tr><td>Stripe, Inc.</td><td>Procesamiento de pagos y suscripciones</td><td>Estados Unidos (San Francisco, CA)</td></tr>
-      <tr><td>Google Ireland Ltd / Google LLC</td><td>Inicio de sesión OAuth (opcional); fuentes web (Google Fonts)</td><td>Irlanda / Estados Unidos</td></tr>
+      <tr><td>Google Ireland Ltd / Google LLC</td><td>Inicio de sesión OAuth (opcional, solo si hace clic en "Continuar con Google")</td><td>Irlanda / Estados Unidos</td></tr>
       <tr><td>Resend, Inc.</td><td>Envío de correos transaccionales (verificación de dirección)</td><td>Estados Unidos</td></tr>
       <tr><td>Render Services, Inc.</td><td>Alojamiento de la aplicación</td><td>Estados Unidos</td></tr>
     </tbody>
@@ -507,7 +536,6 @@ footer a { color: var(--gold); }
 
   <h2>6. Transferencias fuera de la Unión Europea</h2>
   <p>Algunos encargados del tratamiento listados anteriormente están establecidos en Estados Unidos. Estas transferencias están reguladas por las <strong>Cláusulas Contractuales Tipo (CCT)</strong> adoptadas por la Comisión Europea (decisión 2021/914), que ofrecen garantías adecuadas conforme al Art. 46 RGPD. Puede obtener una copia de estas garantías contactándonos.</p>
-  <p>En cuanto a <strong>Google Fonts</strong>: al cargar las páginas, su navegador realiza una solicitud a los servidores de Google para obtener las fuentes tipográficas. Esta solicitud transmite su dirección IP a Google. Tenemos previsto alojar estas fuentes de forma propia en una versión futura para eliminar esta transferencia.</p>
 
   <h2>7. Cookies y almacenamiento local</h2>
   <p>Este sitio utiliza un número mínimo de cookies y elementos de almacenamiento, todos exentos de consentimiento conforme al Art. 5(3) de la Directiva ePrivacy y las directrices de la CNIL:</p>
@@ -536,6 +564,7 @@ footer a { color: var(--gold); }
     <li><strong>Derecho a retirar el consentimiento</strong> — retirar en cualquier momento un consentimiento previamente otorgado (sin afectar a la licitud del tratamiento anterior)</li>
   </ul>
   <p>Para ejercer estos derechos, contáctenos en <a href="mailto:contact@reaction-cam.com">contact@reaction-cam.com</a>. Responderemos en un plazo de un mes (Art. 12 RGPD). Si no está satisfecho con nuestra respuesta, puede presentar una reclamación ante la <strong>CNIL</strong> (<a href="https://www.cnil.fr" target="_blank" rel="noopener">cnil.fr</a>) o ante la autoridad de control de su país de residencia.</p>
+  <p>Herramientas de autoservicio desde su <a href="/account">página de cuenta</a>: descarga de todos sus datos en formato JSON (portabilidad), actualización de su información y eliminación definitiva de su cuenta (supresión).</p>
 
   <h2>9. Protección de menores</h2>
   <p>Este servicio está destinado a personas de al menos 15 años (o la edad de consentimiento digital aplicable en su país de residencia). Si es menor de edad, se requiere el consentimiento de un progenitor o tutor legal. No recopilamos conscientemente datos de personas por debajo de esa edad.</p>
@@ -552,7 +581,7 @@ footer a { color: var(--gold); }
 </main>
 
 <footer>
-  <span>© ReactionCam — <a href="/" data-i18n="nav.home">Accueil</a></span>
+  <span>© ReactionCam — <a href="/" data-i18n="nav.home">Accueil</a> · <a href="/terms">CGU</a> · <a href="/legal">Mentions légales</a></span>
 </footer>
 
 <script src="/ui.js"></script>

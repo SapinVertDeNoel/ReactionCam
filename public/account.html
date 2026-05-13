@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <script>document.documentElement.setAttribute('data-theme',localStorage.getItem('rc-theme')||'dark')</script>
+<script src="/rc-csrf.js"></script>
 <link rel="icon" type="image/x-icon" href="/favicon.ico">
 <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
 <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png">
@@ -12,10 +13,8 @@
 <meta name="theme-color" content="#c9a84c">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="robots" content="noindex">
-<title>ReactionCam</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet">
+<title>Mon compte — ReactionCam</title>
+<link rel="stylesheet" href="/fonts.css">
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   :root {
@@ -203,6 +202,22 @@
     <div class="feedback" id="feedPassword"></div>
   </div>
 
+  <!-- Données personnelles (RGPD Art. 20) -->
+  <div class="card">
+    <div class="card-title">Mes données personnelles</div>
+    <p style="font-size:12px;color:var(--muted2);margin-bottom:14px;line-height:1.7;">
+      Conformément à l'article 20 du RGPD, tu peux télécharger l'ensemble de tes données
+      (compte, vidéos, réactions, notifications) au format JSON.
+    </p>
+    <button class="btn-submit" id="btnExport" onclick="exportData()">Télécharger mes données</button>
+    <div class="feedback" id="feedExport"></div>
+    <p style="font-size:11px;color:var(--muted);margin-top:14px;line-height:1.6;">
+      Pour exercer tes autres droits (rectification, opposition, limitation),
+      écris à <a href="mailto:contact@reaction-cam.com" style="color:var(--gold);">contact@reaction-cam.com</a>.
+      Voir la <a href="/privacy" style="color:var(--gold);">politique de confidentialité</a>.
+    </p>
+  </div>
+
   <!-- Danger zone -->
   <div class="card danger">
     <div class="card-title">Zone de danger</div>
@@ -299,6 +314,27 @@ async function changePassword() {
     document.getElementById('inputNewPwd').value     = '';
     document.getElementById('inputConfirmPwd').value = '';
     if (window.RC && window.RC.toast) window.RC.toast('Mot de passe modifié', { type: 'success' });
+  } catch (e) {
+    setFeed(feed, e.message, 'err');
+  } finally { btn.disabled = false; btn.classList.remove('loading'); }
+}
+
+// ── Export RGPD ───────────────────────────────────────────────────────────────
+async function exportData() {
+  const btn  = document.getElementById('btnExport');
+  const feed = document.getElementById('feedExport');
+  btn.disabled = true; btn.classList.add('loading');
+  try {
+    const res = await fetch('/api/account/export', { credentials: 'include' });
+    if (!res.ok) throw new Error('Export indisponible');
+    const blob = await res.blob();
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href = url;
+    a.download = `reactioncam-export-${Date.now()}.json`;
+    document.body.appendChild(a); a.click(); a.remove();
+    URL.revokeObjectURL(url);
+    setFeed(feed, 'Téléchargement démarré.', 'ok');
   } catch (e) {
     setFeed(feed, e.message, 'err');
   } finally { btn.disabled = false; btn.classList.remove('loading'); }

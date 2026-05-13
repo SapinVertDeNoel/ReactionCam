@@ -10,13 +10,12 @@
 <link rel="manifest" href="/site.webmanifest">
 <meta name="theme-color" content="#c9a84c">
 <script>document.documentElement.setAttribute('data-theme',localStorage.getItem('rc-theme')||'dark')</script>
+<script src="/rc-csrf.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="description" content="Connectez-vous ou créez votre compte ReactionCam pour partager des vidéos et capturer les réactions.">
 <meta name="robots" content="noindex">
-<title>ReactionCam</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet">
+<title>Connexion — ReactionCam</title>
+<link rel="stylesheet" href="/fonts.css">
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 :root {
@@ -167,6 +166,14 @@ header { position: fixed; top: 0; left: 0; right: 0; height: 60px; padding: 0 40
           <label data-i18n="login.label.password">Mot de passe</label>
           <input type="password" id="registerPassword" placeholder="6 caractères minimum" autocomplete="new-password" data-i18n-placeholder="login.pw.placeholder">
         </div>
+        <label style="display:flex;gap:10px;align-items:flex-start;font-size:11px;color:var(--muted);line-height:1.6;letter-spacing:0.02em;margin:6px 0 14px;cursor:pointer;">
+          <input type="checkbox" id="acceptPrivacy" style="margin-top:2px;flex-shrink:0;accent-color:var(--gold);">
+          <span>
+            J'ai lu et j'accepte la
+            <a href="/privacy" target="_blank" rel="noopener" style="color:var(--gold);text-decoration:underline;">politique de confidentialité</a>
+            et confirme avoir au moins 15 ans (ou disposer du consentement parental).
+          </span>
+        </label>
         <button class="btn-submit" id="btnRegister" data-i18n="login.btn.register">Créer mon compte</button>
         <p class="divider"><span data-i18n="login.link.has-account">Déjà un compte ?</span> <a href="#" id="goLogin" style="color:var(--gold);text-decoration:none;" data-i18n="login.link.login">Se connecter</a></p>
       </div>
@@ -246,6 +253,14 @@ document.getElementById('goBackLogin').addEventListener('click', e => { e.preven
 
 if (location.pathname === '/register') showRegister();
 
+// Bloque la connexion Google depuis l'onglet "Créer un compte" si la politique n'est pas acceptée
+document.getElementById('btnGoogleRegister').addEventListener('click', e => {
+  if (!document.getElementById('acceptPrivacy').checked) {
+    e.preventDefault();
+    setError('registerError', 'Tu dois accepter la politique de confidentialité pour continuer.');
+  }
+});
+
 try {
   const flash = sessionStorage.getItem('rc-flash');
   if (flash === 'logout') {
@@ -302,9 +317,11 @@ document.getElementById('btnRegister').addEventListener('click', async () => {
   const name = document.getElementById('registerName').value.trim();
   const email = document.getElementById('registerEmail').value;
   const password = document.getElementById('registerPassword').value;
+  const accepted = document.getElementById('acceptPrivacy').checked;
   if (!name) { setError('registerError', 'Saisis ton nom.'); return; }
   if (!isValidEmail(email)) { setError('registerError', 'Adresse email invalide.'); return; }
   if (password.length < 6) { setError('registerError', 'Mot de passe trop court (6 caractères minimum).'); return; }
+  if (!accepted) { setError('registerError', 'Tu dois accepter la politique de confidentialité pour continuer.'); return; }
   const btn = document.getElementById('btnRegister');
   btn.disabled = true; btn.classList.add('loading');
   let ok, data;

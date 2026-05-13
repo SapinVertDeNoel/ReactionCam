@@ -1,0 +1,21 @@
+User-agent: *
+Allow: /
+Allow: /pricing
+Allow: /privacy
+Allow: /terms
+Allow: /legal
+
+Disallow: /watch/
+Disallow: /dashboard
+Disallow: /admin
+Disallow: /admin/
+Disallow: /account
+Disallow: /login
+Disallow: /register
+Disallow: /stats
+Disallow: /api/
+Disallow: /auth/
+Disallow: /upload
+Disallow: /reaction/
+
+Sitemap: https://reaction-cam.com/sitemap.xml

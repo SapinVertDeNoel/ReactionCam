@@ -10,12 +10,25 @@
 <link rel="manifest" href="/site.webmanifest">
 <meta name="theme-color" content="#c9a84c">
 <script>document.documentElement.setAttribute('data-theme',localStorage.getItem('rc-theme')||'dark')</script>
+<script src="/rc-csrf.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="description" content="Partage une vidéo et capture les vraies réactions de tes amis. Génère un lien, ils sont filmés en regardant, tu récupères la réaction. Gratuit.">
-<title>ReactionCam</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,600;1,300&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet">
+<link rel="canonical" href="https://reaction-cam.com/">
+<title>ReactionCam — Capture les vraies réactions à tes vidéos</title>
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="ReactionCam">
+<meta property="og:url" content="https://reaction-cam.com/">
+<meta property="og:title" content="ReactionCam — Capture les vraies réactions à tes vidéos">
+<meta property="og:description" content="Partage une vidéo, ton ami est filmé en la regardant, tu récupères sa réaction. Gratuit.">
+<meta property="og:image" content="https://reaction-cam.com/og-image.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:locale" content="fr_FR">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="ReactionCam — Capture les vraies réactions à tes vidéos">
+<meta name="twitter:description" content="Partage une vidéo, ton ami est filmé en la regardant, tu récupères sa réaction. Gratuit.">
+<meta name="twitter:image" content="https://reaction-cam.com/og-image.jpg">
+<link rel="stylesheet" href="/fonts.css">
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -501,7 +514,7 @@
 
 <footer>
   <span>© ReactionCam</span>
-  <span><span data-i18n="index.footer.legal">Données traitées selon le RGPD · Consentement explicite requis</span> · <a href="/privacy" data-i18n="footer.privacy" style="color:inherit;text-decoration:none;border-bottom:1px solid currentColor;">Politique de confidentialité</a></span>
+  <span><span data-i18n="index.footer.legal">Données traitées selon le RGPD · Consentement explicite requis</span> · <a href="/privacy" data-i18n="footer.privacy" style="color:inherit;text-decoration:none;border-bottom:1px solid currentColor;">Politique de confidentialité</a> · <a href="/terms" style="color:inherit;text-decoration:none;border-bottom:1px solid currentColor;">CGU</a> · <a href="/legal" style="color:inherit;text-decoration:none;border-bottom:1px solid currentColor;">Mentions légales</a></span>
 </footer>
 
 <script src="/ui.js"></script>
@@ -698,6 +711,8 @@ function uploadFile(file) {
 
   xhr.open('POST', '/upload');
   xhr.withCredentials = true;
+  var csrfMatch = document.cookie.match(/(?:^|;\s*)rc-csrf=([A-Za-z0-9_-]+)/);
+  if (csrfMatch) xhr.setRequestHeader('X-CSRF-Token', csrfMatch[1]);
   xhr.send(formData);
 }
 

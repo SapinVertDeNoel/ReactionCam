@@ -10,13 +10,12 @@
 <link rel="manifest" href="/site.webmanifest">
 <meta name="theme-color" content="#c9a84c">
 <script>document.documentElement.setAttribute('data-theme',localStorage.getItem('rc-theme')||'dark')</script>
+<script src="/rc-csrf.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="description" content="Regarde cette vidéo et enregistre ta réaction en direct avec ta webcam.">
 <meta name="robots" content="noindex">
-<title>ReactionCam</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,600;1,300&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet">
+<title>Visionnage — ReactionCam</title>
+<link rel="stylesheet" href="/fonts.css">
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -302,9 +301,18 @@ body.playing .logo { display: none !important; }
       </div>
       <div class="ci">
         <span class="ci-icon green">✓</span>
-        <span>Tu peux aussi <strong>télécharger ta réaction</strong> à la fin. Conforme RGPD.</span>
+        <span>Tu peux aussi <strong>télécharger ta réaction</strong> à la fin.</span>
+      </div>
+      <div class="ci">
+        <span class="ci-icon green">✓</span>
+        <span>Tu peux <strong>retirer ton consentement</strong> à tout moment en écrivant à <a href="mailto:contact@reaction-cam.com" style="color:var(--gold);">contact@reaction-cam.com</a>.</span>
       </div>
     </div>
+
+    <p style="font-size:10px;color:var(--muted);letter-spacing:0.04em;line-height:1.7;margin:14px 0 4px;">
+      En cliquant sur « J'accepte », tu donnes ton consentement explicite (Art. 6(1)(a) RGPD) à l'enregistrement et au stockage de ta réaction. Tu confirmes avoir au moins 15 ans (ou disposer du consentement parental).
+      Plus d'infos dans la <a href="/privacy" target="_blank" rel="noopener" style="color:var(--gold);">politique de confidentialité</a>.
+    </p>
 
     <div class="btn-group">
       <button class="btn" id="btnConsent">
@@ -317,6 +325,9 @@ body.playing .logo { display: none !important; }
       <a href="/" class="btn btn-ghost" style="margin-top:20px;">Refuser</a>
     </div>
     <p style="margin-top:12px;font-size:9px;color:#222;letter-spacing:0.06em;">Tu peux fermer cette page à tout moment.</p>
+    <p style="margin-top:18px;font-size:10px;color:var(--muted);letter-spacing:0.04em;">
+      <a href="#" class="report-link" data-open-report style="color:var(--muted);text-decoration:underline;">Signaler ce contenu</a>
+    </p>
   </div>
 </div>
 
@@ -388,6 +399,44 @@ body.playing .logo { display: none !important; }
       </button>
       <a href="/" class="btn btn-ghost" style="margin-top:20px;">Accueil</a>
     </div>
+    <p style="margin-top:18px;font-size:10px;color:var(--muted);letter-spacing:0.04em;">
+      <a href="#" class="report-link" data-open-report style="color:var(--muted);text-decoration:underline;">Signaler ce contenu</a>
+    </p>
+  </div>
+</div>
+
+<!-- ═══ MODALE SIGNALEMENT (DSA) ═══ -->
+<div id="reportModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:1000;align-items:center;justify-content:center;padding:20px;">
+  <div style="background:#111;border:1px solid #222;border-radius:6px;max-width:480px;width:100%;padding:28px;color:#e8e0d0;font-family:'DM Mono',monospace;">
+    <h3 style="font-family:'Cormorant Garamond',serif;font-weight:300;font-size:22px;color:#c9a84c;margin-bottom:8px;letter-spacing:0.04em;">Signaler ce contenu</h3>
+    <p style="font-size:11px;color:#a09080;line-height:1.7;margin-bottom:18px;">Nous examinons chaque signalement et retirons les contenus manifestement illicites dans un délai raisonnable (DSA, UE 2022/2065).</p>
+
+    <form id="reportForm">
+      <label style="display:block;font-size:10px;letter-spacing:0.16em;text-transform:uppercase;color:#5a5245;margin-bottom:6px;">Motif</label>
+      <select id="reportReason" required style="width:100%;padding:10px 12px;background:#0a0a0a;border:1px solid #222;color:#e8e0d0;font-family:inherit;font-size:12px;border-radius:3px;margin-bottom:16px;">
+        <option value="">— Choisis un motif —</option>
+        <option value="illegal">Contenu illégal</option>
+        <option value="sexual">Contenu sexuel / nudité</option>
+        <option value="minor">Mineur impliqué</option>
+        <option value="hate">Haine / discrimination</option>
+        <option value="harassment">Harcèlement / menaces</option>
+        <option value="copyright">Atteinte au droit d'auteur</option>
+        <option value="privacy">Atteinte à la vie privée</option>
+        <option value="spam">Spam / arnaque</option>
+        <option value="malware">Malware / lien malveillant</option>
+        <option value="other">Autre</option>
+      </select>
+
+      <label style="display:block;font-size:10px;letter-spacing:0.16em;text-transform:uppercase;color:#5a5245;margin-bottom:6px;">Description <span style="color:#2e2a25;font-size:9px;text-transform:none;letter-spacing:0;">(facultatif, max 2000 caractères)</span></label>
+      <textarea id="reportDescription" rows="4" maxlength="2000" placeholder="Précise le contexte si nécessaire…" style="width:100%;padding:10px 12px;background:#0a0a0a;border:1px solid #222;color:#e8e0d0;font-family:inherit;font-size:12px;border-radius:3px;resize:vertical;margin-bottom:6px;"></textarea>
+
+      <p id="reportMsg" style="font-size:11px;color:#c0392b;margin:6px 0 12px;min-height:14px;"></p>
+
+      <div style="display:flex;gap:10px;justify-content:flex-end;">
+        <button type="button" id="reportCancel" style="padding:9px 18px;background:transparent;border:1px solid #222;color:#a09080;font-family:inherit;font-size:11px;letter-spacing:0.08em;cursor:pointer;border-radius:3px;">Annuler</button>
+        <button type="submit" id="reportSubmit" style="padding:9px 18px;background:#c9a84c;border:none;color:#0a0a0a;font-family:inherit;font-size:11px;letter-spacing:0.08em;cursor:pointer;border-radius:3px;font-weight:600;">Envoyer</button>
+      </div>
+    </form>
   </div>
 </div>
 
@@ -748,6 +797,70 @@ async function handleRecordingDone() {
 
   showScreen('screenResult');
 }
+
+// ═══ Modale Signalement (DSA) ═══════════════════════════════════════════════
+(function () {
+  const modal    = document.getElementById('reportModal');
+  const form     = document.getElementById('reportForm');
+  const reasonEl = document.getElementById('reportReason');
+  const descEl   = document.getElementById('reportDescription');
+  const msgEl    = document.getElementById('reportMsg');
+  const submitEl = document.getElementById('reportSubmit');
+  if (!modal || !form) return;
+
+  function openModal() {
+    msgEl.textContent = '';
+    msgEl.style.color = '#c0392b';
+    form.style.display = '';
+    reasonEl.value = '';
+    descEl.value = '';
+    submitEl.disabled = false;
+    submitEl.textContent = 'Envoyer';
+    modal.style.display = 'flex';
+  }
+  function closeModal() { modal.style.display = 'none'; }
+
+  document.querySelectorAll('[data-open-report]').forEach(el => {
+    el.addEventListener('click', (e) => { e.preventDefault(); openModal(); });
+  });
+  document.getElementById('reportCancel').addEventListener('click', closeModal);
+  modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (!videoId) { msgEl.textContent = 'Vidéo introuvable.'; return; }
+    const reason = reasonEl.value;
+    const description = descEl.value.trim().slice(0, 2000);
+    if (!reason) { msgEl.textContent = 'Choisis un motif.'; return; }
+
+    submitEl.disabled = true;
+    submitEl.textContent = 'Envoi…';
+    msgEl.textContent = '';
+
+    try {
+      const r = await fetch('/api/report', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ videoId, reason, description }),
+      });
+      const data = await r.json().catch(() => ({}));
+      if (!r.ok) {
+        msgEl.textContent = data.error || 'Erreur lors de l\'envoi.';
+        submitEl.disabled = false;
+        submitEl.textContent = 'Envoyer';
+        return;
+      }
+      msgEl.style.color = '#4a7c59';
+      msgEl.textContent = '✓ Signalement reçu. Merci, on examine ça.';
+      form.style.display = 'none';
+      setTimeout(closeModal, 2200);
+    } catch {
+      msgEl.textContent = 'Erreur réseau. Réessaie.';
+      submitEl.disabled = false;
+      submitEl.textContent = 'Envoyer';
+    }
+  });
+})();
 </script>
 </body>
 </html>
