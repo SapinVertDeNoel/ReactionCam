@@ -44,7 +44,9 @@ if (process.env.NODE_ENV === 'production' || process.env.RENDER) {
 }
 const missing = REQUIRED_ENV.filter(k => !process.env[k]);
 if (missing.length) {
-  logger.error('❌ Variables manquantes :', missing.join(', '));
+  // console.error (sync) plutôt que logger.error : pino bufferise stdout en
+  // async et le message serait perdu avant process.exit().
+  console.error('❌ Variables manquantes :', missing.join(', '));
   process.exit(1);
 }
 
@@ -58,7 +60,7 @@ cloudinary.config({
 // ── MongoDB ───────────────────────────────────────────────────────────────────
 mongoose.connect(process.env.MONGODB_URI)
   .then(() => logger.info('✅ MongoDB connecté'))
-  .catch(err => { logger.error('❌ MongoDB :', err.message); process.exit(1); });
+  .catch(err => { console.error('❌ MongoDB :', err.message); process.exit(1); });
 
 // ── Plans ─────────────────────────────────────────────────────────────────────
 const PLANS = {
